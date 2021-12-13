@@ -26,6 +26,7 @@ void processInput(GLFWwindow *window);
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 
+unsigned int loadTexture(char const * path);
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -56,7 +57,7 @@ struct ProgramState {
     bool ImGuiEnabled = false;
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
-    glm::vec3 backpackPosition = glm::vec3(0.0f);
+    glm::vec3 backpackPosition = glm::vec3(4.0f, 2.0f, 0.0f);
     float backpackScale = 1.0f;
     PointLight pointLight;
     ProgramState()
@@ -161,15 +162,16 @@ int main() {
 
     // build and compile shaders
     // -------------------------
-    Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
+    Shader entityShader("resources/shaders/entity_lighting.vs", "resources/shaders/entity_lighting.fs");
 
     // load models
     // -----------
     Model ourModel("resources/objects/backpack/backpack.obj");
     ourModel.SetShaderTextureNamePrefix("material.");
 
+
     PointLight& pointLight = programState->pointLight;
-    pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
+    pointLight.position = glm::vec3(0.0f, 0.0, 1.0);
     pointLight.ambient = glm::vec3(0.1, 0.1, 0.1);
     pointLight.diffuse = glm::vec3(0.6, 0.6, 0.6);
     pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
@@ -178,8 +180,33 @@ int main() {
     pointLight.linear = 0.09f;
     pointLight.quadratic = 0.032f;
 
+    float terrainVertices[] = {
+            // positions         //normals         // texture Coords (swapped y coordinates because texture is flipped upside down)
+            25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 0.0f,
+            -25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+            -25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f,
 
+            25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 0.0f,
+            -25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f,
+            25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 20.0f
+    };
 
+    unsigned int terrainVAO, terrainVBO;
+    glGenVertexArrays(1, &terrainVAO);
+    glGenBuffers(1, &terrainVBO);
+    glBindVertexArray(terrainVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, terrainVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(terrainVertices), &terrainVertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(6* sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+    //load textures
+    //------------
+    unsigned int terrainTexture = loadTexture(FileSystem::getPath("/resources/textures/terrain.jpeg").c_str());
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
@@ -203,31 +230,53 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // don't forget to enable shader before setting uniforms
-        ourShader.use();
-        pointLight.position = glm::vec3(4.0 * cos(currentFrame), 4.0f, 4.0 * sin(currentFrame));
-        ourShader.setVec3("pointLight.position", pointLight.position);
-        ourShader.setVec3("pointLight.ambient", pointLight.ambient);
-        ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
-        ourShader.setVec3("pointLight.specular", pointLight.specular);
-        ourShader.setFloat("pointLight.constant", pointLight.constant);
-        ourShader.setFloat("pointLight.linear", pointLight.linear);
-        ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
-        ourShader.setVec3("viewPosition", programState->camera.Position);
-        ourShader.setFloat("material.shininess", 32.0f);
+        entityShader.use();
+        //directional light
+        entityShader.setVec3("dirLight.direction", -1.0f, -0.2f, -0.3f);
+        entityShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
+        entityShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
+        entityShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
+        //point light
+        entityShader.setVec3("pointLight.position", pointLight.position);
+        entityShader.setVec3("pointLight.ambient", pointLight.ambient);
+        entityShader.setVec3("pointLight.diffuse", pointLight.diffuse);
+        entityShader.setVec3("pointLight.specular", pointLight.specular);
+        entityShader.setFloat("pointLight.constant", pointLight.constant);
+        entityShader.setFloat("pointLight.linear", pointLight.linear);
+        entityShader.setFloat("pointLight.quadratic", pointLight.quadratic);
+        //spotlight (turn on if u want flashlight)
+//        entityShader.setVec3("spotLight.position", programState->camera.Position);
+//        entityShader.setVec3("spotLight.direction", programState->camera.Front);
+//        entityShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
+//        entityShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
+//        entityShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
+//        entityShader.setFloat("spotLight.constant", 1.0f);
+//        entityShader.setFloat("spotLight.linear", 0.09);
+//        entityShader.setFloat("spotLight.quadratic", 0.032);
+//        entityShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+//        entityShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
+        entityShader.setVec3("viewPos", programState->camera.Position);
+        entityShader.setFloat("material.shininess", 32.0f);
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
                                                 (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = programState->camera.GetViewMatrix();
-        ourShader.setMat4("projection", projection);
-        ourShader.setMat4("view", view);
+        entityShader.setMat4("projection", projection);
+        entityShader.setMat4("view", view);
 
         // render the loaded model
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model,
                                programState->backpackPosition); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
-        ourShader.setMat4("model", model);
-        ourModel.Draw(ourShader);
+        entityShader.setMat4("model", model);
+        ourModel.Draw(entityShader);
+        glActiveTexture(GL_TEXTURE0);
+        glBindVertexArray(terrainVAO);
+        glBindTexture(GL_TEXTURE_2D, terrainTexture);
+        model = glm::mat4(1.0f);
+        entityShader.setMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
@@ -345,4 +394,41 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         }
     }
+}
+
+unsigned int loadTexture(char const * path)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data)
+    {
+        GLenum format;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "Texture failed to load at path: " << path << std::endl;
+        stbi_image_free(data);
+    }
+
+    return textureID;
 }
