@@ -33,6 +33,8 @@ unsigned int loadCubemap(vector<std::string> faces);
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
+bool blinn = false;
+bool blinnKeyPressed = false;
 
 // camera
 
@@ -169,11 +171,11 @@ int main() {
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
     // load models
     // -----------
-    Model ourModel("resources/objects/backpack/backpack.obj");
+    Model ourModel("resources/objects/trees/trees.obj");
     ourModel.SetShaderTextureNamePrefix("material.");
 
     PointLight& pointLight = programState->pointLight;
-    pointLight.position = glm::vec3(0.0f, 0.0, 1.0);
+    pointLight.position = glm::vec3(0.0f, 2.0, 1.0);
     pointLight.ambient = glm::vec3(0.1, 0.1, 0.1);
     pointLight.diffuse = glm::vec3(0.6, 0.6, 0.6);
     pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
@@ -266,7 +268,7 @@ int main() {
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    //load skbybox
+    //load skybox
     vector<std::string> faces
     {
         FileSystem::getPath("/resources/textures/skybox/right.png"),
@@ -301,9 +303,9 @@ int main() {
         entityShader.use();
         //directional light
         entityShader.setVec3("dirLight.direction", -1.0f, -0.2f, -0.3f);
-        entityShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
-        entityShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
-        entityShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
+        entityShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.20f);
+        entityShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.6f);
+        entityShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.7f);
         //point light
         entityShader.setVec3("pointLight.position", pointLight.position);
         entityShader.setVec3("pointLight.ambient", pointLight.ambient);
@@ -313,17 +315,18 @@ int main() {
         entityShader.setFloat("pointLight.linear", pointLight.linear);
         entityShader.setFloat("pointLight.quadratic", pointLight.quadratic);
         //spotlight (turn on if u want flashlight)
-//        entityShader.setVec3("spotLight.position", programState->camera.Position);
-//        entityShader.setVec3("spotLight.direction", programState->camera.Front);
-//        entityShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
-//        entityShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
-//        entityShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
-//        entityShader.setFloat("spotLight.constant", 1.0f);
-//        entityShader.setFloat("spotLight.linear", 0.09);
-//        entityShader.setFloat("spotLight.quadratic", 0.032);
-//        entityShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
-//        entityShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
+        entityShader.setVec3("spotLight.position", programState->camera.Position);
+        entityShader.setVec3("spotLight.direction", programState->camera.Front);
+        entityShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
+        entityShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
+        entityShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
+        entityShader.setFloat("spotLight.constant", 1.0f);
+        entityShader.setFloat("spotLight.linear", 0.09);
+        entityShader.setFloat("spotLight.quadratic", 0.032);
+        entityShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+        entityShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
         entityShader.setVec3("viewPos", programState->camera.Position);
+        entityShader.setInt("blinn", blinn);
         entityShader.setFloat("material.shininess", 32.0f);
         // view/projection transformations
         glm::mat4 view = programState->camera.GetViewMatrix();
@@ -397,6 +400,16 @@ void processInput(GLFWwindow *window) {
         programState->camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         programState->camera.ProcessKeyboard(RIGHT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !blinnKeyPressed)
+    {
+        cout << blinnKeyPressed << '\n';
+        blinn = !blinn;
+        blinnKeyPressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE)
+    {
+        blinnKeyPressed = false;
+    }
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
