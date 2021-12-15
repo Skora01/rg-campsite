@@ -164,6 +164,7 @@ int main() {
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE); // Neophodno promeniti redosled za teren da ne bi bio odstranjen
 
     // build and compile shaders
     // -------------------------
@@ -192,15 +193,26 @@ int main() {
     pointLight.linear = 0.09f;
     pointLight.quadratic = 0.032f;
 
+//    float terrainVertices[] = {
+//            // positions                             //normals                       // texture Coords (swapped y coordinates because texture is flipped upside down)
+//            25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 0.0f,
+//            -25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+//            -25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f,
+//
+//            25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 0.0f,
+//            -25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f,
+//            25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 20.0f
+//    };
+
     float terrainVertices[] = {
-            // positions         //normals         // texture Coords (swapped y coordinates because texture is flipped upside down)
+            // positions                             //normals                       // texture Coords (swapped y coordinates because texture is flipped upside down)
             25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 0.0f,
-            -25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
             -25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f,
+            -25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
 
             25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 0.0f,
-            -25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f,
-            25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 20.0f
+            25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 20.0f,
+            -25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f
     };
 
     float skyboxVertices[] = {

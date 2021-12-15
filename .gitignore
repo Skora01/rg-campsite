@@ -306,7 +306,7 @@ _deps
 # Personal ignores
 resources/objects/grass-patches/podmodeli.mtl
 resources/objects/grass-patches/podmodeli.obj
-
+resources/program_state.txt
 
 
 # End of https://www.toptal.com/developers/gitignore/api/c++,cmake,clion,clion+all,clion+iml,c
