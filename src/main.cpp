@@ -239,6 +239,17 @@ int main() {
             -1.0f, -1.0f,  1.0f,
             1.0f, -1.0f,  1.0f
     };
+
+    float transparentVertices[] = {
+            // positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
+            0.0f,  0.5f,  0.0f, 0.0f, 1.0f, 0.0f,  0.0f,  0.0f,
+            0.0f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,   0.0f,  1.0f,
+            1.0f, -0.5f,0.0f, 0.0f, 1.0f, 0.0f,   1.0f,  1.0f,
+
+            0.0f,  0.5f,  0.0f,0.0f, 1.0f, 0.0f,  0.0f,  0.0f,
+            1.0f, -0.5f,  0.0f,0.0f, 1.0f, 0.0f,  1.0f,  1.0f,
+            1.0f,  0.5f,  0.0f,0.0f, 1.0f, 0.0f,  1.0f,  0.0f
+    };
     //terrain  VAO,VBO
     unsigned int terrainVAO, terrainVBO;
     glGenVertexArrays(1, &terrainVAO);
@@ -253,6 +264,19 @@ int main() {
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(6* sizeof(float)));
     glEnableVertexAttribArray(2);
 
+    unsigned int transparentVAO, transparentVBO;
+    glGenVertexArrays(1, &transparentVAO);
+    glGenBuffers(1, &transparentVBO);
+    glBindVertexArray(transparentVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), &transparentVertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(6* sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glBindVertexArray(0);
     //skybox VAO,VBO
     unsigned int skyboxVAO, skyboxVBO;
     glGenVertexArrays(1, &skyboxVAO);
@@ -265,6 +289,7 @@ int main() {
     //load textures
     //------------
     unsigned int terrainTexture = loadTexture(FileSystem::getPath("/resources/textures/terrain.jpeg").c_str());
+    unsigned int transparentTexture = loadTexture(FileSystem::getPath("resources/textures/terrain.jpeg").c_str());
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
@@ -278,6 +303,14 @@ int main() {
         FileSystem::getPath("/resources/textures/skybox/front.png"),
         FileSystem::getPath("/resources/textures/skybox/back.png")
     };
+    vector<glm::vec3> vegetation
+            {
+                    glm::vec3(-1.5f, 0.0f, -0.48f),
+                    glm::vec3( 1.5f, 0.0f, 0.51f),
+                    glm::vec3( 0.0f, 0.0f, 0.7f),
+                    glm::vec3(-0.3f, 0.0f, -2.3f),
+                    glm::vec3 (0.5f, 0.0f, -0.6f)
+            };
     unsigned int cubemapTexture = loadCubemap(faces);
 
     // render loop
@@ -348,7 +381,6 @@ int main() {
         model = glm::mat4(1.0f);
         entityShader.setMat4("model", model);
         glDrawArrays(GL_TRIANGLES, 0, 6);
-
         // draw skybox as last
         glDepthFunc(GL_LEQUAL); // change depth function so depth test passes when values are equal to depth buffer's content
         skyboxShader.use();
@@ -357,7 +389,6 @@ int main() {
         skyboxShader.setMat4("projection", projection);
         //skybox cube
         glBindVertexArray(skyboxVAO);
-        glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
@@ -400,9 +431,9 @@ void processInput(GLFWwindow *window) {
         programState->camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         programState->camera.ProcessKeyboard(RIGHT, deltaTime);
+    //turning on Blinn-Phong lighting
     if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !blinnKeyPressed)
     {
-        cout << blinnKeyPressed << '\n';
         blinn = !blinn;
         blinnKeyPressed = true;
     }
