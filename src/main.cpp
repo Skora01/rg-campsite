@@ -171,8 +171,16 @@ int main() {
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
     // load models
     // -----------
-    Model ourModel("resources/objects/trees/trees.obj");
-    ourModel.SetShaderTextureNamePrefix("material.");
+
+    // Tree model
+    Model treeModel("resources/objects/trees/trees.obj");
+    treeModel.SetShaderTextureNamePrefix("material.");
+
+    // Grass model
+    Model grassModel("resources/objects/grass-patches/grass.obj");
+    grassModel.SetShaderTextureNamePrefix("material.");
+
+
 
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(0.0f, 2.0, 1.0);
@@ -335,13 +343,22 @@ int main() {
         entityShader.setMat4("projection", projection);
         entityShader.setMat4("view", view);
 
-        // render the loaded model
+        // render the loaded tree model
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model,
                                programState->backpackPosition); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
         entityShader.setMat4("model", model);
-        ourModel.Draw(entityShader);
+        treeModel.Draw(entityShader);
+
+        // Render the loaded grass model
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,
+                               programState->backpackPosition); // translate it down so it's at the center of the scene
+        model = glm::scale(model, glm::vec3(5.0f, 5.0f, 5.0f));    // it's a bit too big for our scene, so scale it down
+        entityShader.setMat4("model", model);
+        grassModel.Draw(entityShader);
+
         glActiveTexture(GL_TEXTURE0);
         glBindVertexArray(terrainVAO);
         glBindTexture(GL_TEXTURE_2D, terrainTexture);

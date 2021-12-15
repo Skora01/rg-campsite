@@ -130,6 +130,10 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, boo
 
 void main()
 {
+    // Fragment discarding
+    float alpha = texture(material.diffuse, TexCoords).a;
+    if(alpha < 0.35)
+        discard;
     // properties
     vec3 norm = normalize(Normal);
     vec3 viewDir = normalize(viewPos - FragPos);

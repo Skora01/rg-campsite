@@ -301,4 +301,12 @@ _deps
 # External projects
 *-prefix/
 
+
+
+# Personal ignores
+resources/objects/grass-patches/podmodeli.mtl
+resources/objects/grass-patches/podmodeli.obj
+
+
+
 # End of https://www.toptal.com/developers/gitignore/api/c++,cmake,clion,clion+all,clion+iml,c
