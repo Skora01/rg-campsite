@@ -201,7 +201,7 @@ int main() {
     //Upright log model
     Model log2Model("resources/objects/log2/log2.obj");
     log2Model.SetShaderTextureNamePrefix("material.");
-    
+
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(0.0f, 0.1f, 1.0);
     pointLight.ambient = glm::vec3(0.1, 0.1, 0.1);

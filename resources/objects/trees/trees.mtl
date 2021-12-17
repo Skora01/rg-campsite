@@ -24,4 +24,3 @@ d 1.000000
 illum 2
 map_Bump -o 0.000000 -1.000000 0.000000 branch1Normal.png
 map_Kd -o 0.000000 -1.000000 0.000000 branch1coloralpha.png
-
