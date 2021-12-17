@@ -35,6 +35,7 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 bool blinn = false;
 bool blinnKeyPressed = false;
+bool freeCamKeyPressed = false;
 
 // camera
 
@@ -62,11 +63,24 @@ struct ProgramState {
     bool ImGuiEnabled = false;
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
-    glm::vec3 backpackPosition = glm::vec3(4.0f, 2.0f, 0.0f);
-    float backpackScale = 1.0f;
+    glm::vec3 tentPosition = glm::vec3(13.0f, 3.0f, 12.0f);
+    float tentRotation = 137.0f;
+    float tentScale = 500.0f;
+    glm::vec3 tent2Position = glm::vec3(-16.0f, 0.0f, 8.0f);
+    float tent2Rotation = 31.0f;
+    float tent2Scale = 400.0f;
+    glm::vec3 logPosition = glm::vec3(5.0f,-0.2f,0.0f);
+    float logRotation = 90.0f;
+    float logScale = 0.150f;
+    glm::vec3 secondLogPosition = glm::vec3(-4.0f,-0.2f,0.0f);
+    float secondLogRotation = 250.0f;
+    float secondLogScale = 0.130f;
+    glm::vec3 log2Position = glm::vec3(0.0f,0.0f,5.0f);
+    float log2Rotation = 250.0f;
+    float log2Scale = 0.250f;
     PointLight pointLight;
     ProgramState()
-            : camera(glm::vec3(0.0f, 0.0f, 3.0f)) {}
+            : camera(glm::vec3(-9.0f, 3.0f, -12.0f)) {}
 
     void SaveToFile(std::string filename);
 
@@ -79,9 +93,6 @@ void ProgramState::SaveToFile(std::string filename) {
         << clearColor.g << '\n'
         << clearColor.b << '\n'
         << ImGuiEnabled << '\n'
-        << camera.Position.x << '\n'
-        << camera.Position.y << '\n'
-        << camera.Position.z << '\n'
         << camera.Front.x << '\n'
         << camera.Front.y << '\n'
         << camera.Front.z << '\n';
@@ -94,9 +105,6 @@ void ProgramState::LoadFromFile(std::string filename) {
            >> clearColor.g
            >> clearColor.b
            >> ImGuiEnabled
-           >> camera.Position.x
-           >> camera.Position.y
-           >> camera.Position.z
            >> camera.Front.x
            >> camera.Front.y
            >> camera.Front.z;
@@ -164,6 +172,7 @@ int main() {
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_CULL_FACE); // Neophodno promeniti redosled za teren da ne bi bio odstranjen
 
     // build and compile shaders
     // -------------------------
@@ -171,11 +180,30 @@ int main() {
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
     // load models
     // -----------
-    Model ourModel("resources/objects/trees/trees.obj");
-    ourModel.SetShaderTextureNamePrefix("material.");
-
+    // Tree model
+    Model treeModel("resources/objects/trees/trees.obj");
+    treeModel.SetShaderTextureNamePrefix("material.");
+    // Grass model
+    Model grassModel("resources/objects/grass-patches/grass.obj");
+    grassModel.SetShaderTextureNamePrefix("material.");
+    // Tent model
+    Model tentModel("resources/objects/tent/tent.obj");
+    tentModel.SetShaderTextureNamePrefix("material.");
+    //Secode tent model
+    Model tent2Model("resources/objects/tent2.0/tent.obj");
+    tent2Model.SetShaderTextureNamePrefix("material.");
+    //Campfire model
+    Model campfireModel("resources/objects/campfire/Campfire.obj");
+    campfireModel.SetShaderTextureNamePrefix("material.");
+    //Log model
+    Model logModel("resources/objects/log/log.obj");
+    logModel.SetShaderTextureNamePrefix("material.");
+    //Upright log model
+    Model log2Model("resources/objects/log2/log2.obj");
+    log2Model.SetShaderTextureNamePrefix("material.");
+    
     PointLight& pointLight = programState->pointLight;
-    pointLight.position = glm::vec3(0.0f, 2.0, 1.0);
+    pointLight.position = glm::vec3(0.0f, 0.1f, 1.0);
     pointLight.ambient = glm::vec3(0.1, 0.1, 0.1);
     pointLight.diffuse = glm::vec3(0.6, 0.6, 0.6);
     pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
@@ -184,15 +212,26 @@ int main() {
     pointLight.linear = 0.09f;
     pointLight.quadratic = 0.032f;
 
+//    float terrainVertices[] = {
+//            // positions                             //normals                       // texture Coords (swapped y coordinates because texture is flipped upside down)
+//            25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 0.0f,
+//            -25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+//            -25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f,
+//
+//            25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 0.0f,
+//            -25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f,
+//            25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 20.0f
+//    };
+
     float terrainVertices[] = {
-            // positions         //normals         // texture Coords (swapped y coordinates because texture is flipped upside down)
+            // positions                             //normals                       // texture Coords (swapped y coordinates because texture is flipped upside down)
             25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 0.0f,
-            -25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
             -25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f,
+            -25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
 
             25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 0.0f,
-            -25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f,
-            25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 20.0f
+            25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 20.0f,
+            -25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f
     };
 
     float skyboxVertices[] = {
@@ -289,7 +328,6 @@ int main() {
     //load textures
     //------------
     unsigned int terrainTexture = loadTexture(FileSystem::getPath("/resources/textures/terrain.jpeg").c_str());
-    unsigned int transparentTexture = loadTexture(FileSystem::getPath("resources/textures/terrain.jpeg").c_str());
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
@@ -303,14 +341,6 @@ int main() {
         FileSystem::getPath("/resources/textures/skybox/front.png"),
         FileSystem::getPath("/resources/textures/skybox/back.png")
     };
-    vector<glm::vec3> vegetation
-            {
-                    glm::vec3(-1.5f, 0.0f, -0.48f),
-                    glm::vec3( 1.5f, 0.0f, 0.51f),
-                    glm::vec3( 0.0f, 0.0f, 0.7f),
-                    glm::vec3(-0.3f, 0.0f, -2.3f),
-                    glm::vec3 (0.5f, 0.0f, -0.6f)
-            };
     unsigned int cubemapTexture = loadCubemap(faces);
 
     // render loop
@@ -368,13 +398,77 @@ int main() {
         entityShader.setMat4("projection", projection);
         entityShader.setMat4("view", view);
 
-        // render the loaded model
+        // Render loaded tree model
         glm::mat4 model = glm::mat4(1.0f);
+//        model = glm::translate(model,
+//                               programState->backpackPosition); // translate it down so it's at the center of the scene
+//        model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
+//        entityShader.setMat4("model", model);
+//        treeModel.Draw(entityShader);
+//
+        // Render loaded grass model
+//        model = glm::mat4(1.0f);
+//        model = glm::translate(model,
+//                               glm::vec3(1.0f,1.0f,1.0f)); // translate it down so it's at the center of the scene
+//        model = glm::scale(model, glm::vec3(1.0f));    // it's a bit too big for our scene, so scale it down
+//        entityShader.setMat4("model", model);
+//        grassModel.Draw(entityShader);
+
+        //Render loaded tent model
+        model = glm::mat4(1.0f);
         model = glm::translate(model,
-                               programState->backpackPosition); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
+                               programState->tentPosition);
+        model = glm::rotate(model, glm::radians(programState->tentRotation), glm::vec3(0,1,0));
+        model = glm::scale(model, glm::vec3(programState->tentScale));
         entityShader.setMat4("model", model);
-        ourModel.Draw(entityShader);
+        tentModel.Draw(entityShader);
+
+        //Render loaded second tent model
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,
+                               programState->tent2Position);
+        model = glm::rotate(model, glm::radians(programState->tent2Rotation), glm::vec3(0,1,0));
+        model = glm::scale(model, glm::vec3(programState->tent2Scale));
+        entityShader.setMat4("model", model);
+        tent2Model.Draw(entityShader);
+
+        //Render loaded campfire model
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,
+                               pointLight.position);
+//        entityShader.setVec3("lightColor", glm::vec3(10.0f, 0.0f, 0.0f));//lightColor need to be adjusted
+        entityShader.setVec3("lightColor", glm::vec3(150.0f,88.0f,34.0f));
+        entityShader.setMat4("model", model);
+        campfireModel.Draw(entityShader);
+
+        //Render loaded log model
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,
+                               programState->logPosition);
+        model = glm::rotate(model, glm::radians(programState->logRotation), glm::vec3(0,1,0));
+        model = glm::scale(model, glm::vec3(programState->logScale));
+        entityShader.setMat4("model", model);
+        logModel.Draw(entityShader);
+
+        //Render second log of same model
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,
+                               programState->secondLogPosition);
+        model = glm::rotate(model, glm::radians(programState->secondLogRotation), glm::vec3(0,1,0));
+        model = glm::scale(model, glm::vec3(programState->secondLogScale));
+        entityShader.setMat4("model", model);
+        logModel.Draw(entityShader);
+
+        //Render loaded log 2 model
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,
+                               programState->log2Position);
+        model = glm::rotate(model, glm::radians(programState->log2Rotation), glm::vec3(0,1,0));
+        model = glm::scale(model, glm::vec3(programState->log2Scale));
+        entityShader.setMat4("model", model);
+        log2Model.Draw(entityShader);
+
+        //Loading terrain
         glActiveTexture(GL_TEXTURE0);
         glBindVertexArray(terrainVAO);
         glBindTexture(GL_TEXTURE_2D, terrainTexture);
@@ -393,6 +487,7 @@ int main() {
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
         glDepthFunc(GL_LESS); // set depth function back to default
+
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
 
@@ -431,6 +526,15 @@ void processInput(GLFWwindow *window) {
         programState->camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         programState->camera.ProcessKeyboard(RIGHT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS && !freeCamKeyPressed)
+    {
+        programState->camera.freeCam = !programState->camera.freeCam;
+        freeCamKeyPressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_RELEASE)
+    {
+        freeCamKeyPressed = false;
+    }
     //turning on Blinn-Phong lighting
     if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !blinnKeyPressed)
     {
@@ -488,12 +592,29 @@ void DrawImGui(ProgramState *programState) {
         ImGui::Text("Hello text");
         ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
-        ImGui::DragFloat3("Backpack position", (float*)&programState->backpackPosition);
-        ImGui::DragFloat("Backpack scale", &programState->backpackScale, 0.05, 0.1, 4.0);
-
-        ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
-        ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
-        ImGui::DragFloat("pointLight.quadratic", &programState->pointLight.quadratic, 0.05, 0.0, 1.0);
+        ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 3.0);
+        ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 3.0);
+        ImGui::DragFloat("pointLight.quadratic", &programState->pointLight.quadratic, 0.05, 0.0, 3.0);
+        ImGui::Text("Tent:");
+        ImGui::DragFloat3("Tent position", (float*)&programState->tentPosition);
+        ImGui::DragFloat("Tent rotation", &programState->tentRotation, 1.0, 0, 360);
+        ImGui::DragFloat("Tent scale", &programState->tentScale, 1.0, 400.0, 500.0);
+        ImGui::Text("Tent2:");
+        ImGui::DragFloat3("Tent2 position", (float*)&programState->tent2Position);
+        ImGui::DragFloat("Tent2 rotation", &programState->tent2Rotation, 1.0, 0, 360);
+        ImGui::DragFloat("Tent2 scale", &programState->tent2Scale, 1.0, 400.0, 500.0);
+        ImGui::Text("Log");
+        ImGui::DragFloat3("Log position", (float*)&programState->logPosition);
+        ImGui::DragFloat("Log rotation", &programState->logRotation, 1.0, 0, 360);
+        ImGui::DragFloat("Log scale", &programState->logScale, 0.05, 0.1, 4.0);
+        ImGui::Text("Second log");
+        ImGui::DragFloat3("Second position", (float*)&programState->secondLogPosition);
+        ImGui::DragFloat("Second rotation", &programState->secondLogRotation, 1.0, 0, 360);
+        ImGui::DragFloat("Second scale", &programState->secondLogScale, 0.05, 0.1, 4.0);
+        ImGui::Text("Log2");
+        ImGui::DragFloat3("Log2 position", (float*)&programState->log2Position);
+        ImGui::DragFloat("Log2 rotation", &programState->log2Rotation, 1.0, 0, 360);
+        ImGui::DragFloat("Log2 scale", &programState->log2Scale, 0.05, 0.1, 4.0);
         ImGui::End();
     }
 

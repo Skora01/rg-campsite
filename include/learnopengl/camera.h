@@ -40,6 +40,8 @@ public:
     float MovementSpeed;
     float MouseSensitivity;
     float Zoom;
+    //free camera option
+    bool freeCam = false;
 
     // constructor with vectors
     Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
@@ -78,6 +80,8 @@ public:
             Position -= Right * velocity;
         if (direction == RIGHT)
             Position += Right * velocity;
+        if (!freeCam)
+            Position.y = 3.0f;
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
