@@ -1,4 +1,4 @@
-#version 330 core
+#version 460 core
 out vec4 FragColor;
 
 struct DirLight {
@@ -152,7 +152,7 @@ void main()
 {
     // Fragment discarding
     float alpha = texture(texture_diffuse1, TexCoords).a;
-    if(alpha < 0.1)
+    if(alpha < 0.35)
         discard;
     // properties
     vec3 norm = normalize(Normal);
@@ -160,11 +160,9 @@ void main()
     // phase 1: directional lighting
     vec3 result = CalcDirLight(dirLight, norm, viewDir);
     // phase 2: point lights
-    //for(int i = 0; i < NR_POINT_LIGHTS; i++)
-       result += CalcPointLight(pointLight, norm, FragPos, viewDir);
+    result = CalcPointLight(pointLight, norm, FragPos, viewDir);    // + !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // phase 3: spot light
    result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
 
-    FragColor = vec4(result, 1.0);
-    // FragColor = texture(texture_diffuse1, TexCoords);
+   FragColor = vec4(result, 1.0);
 }

@@ -58,6 +58,13 @@ struct PointLight {
     float quadratic;
 };
 
+struct DirLight {
+    glm::vec3 direction;
+    glm::vec3 ambient;
+    glm::vec3 diffuse;
+    glm::vec3 specular;
+};
+
 struct ProgramState {
     glm::vec3 clearColor = glm::vec3(0);
     bool ImGuiEnabled = false;
@@ -79,6 +86,7 @@ struct ProgramState {
     float log2Rotation = 250.0f;
     float log2Scale = 0.250f;
     PointLight pointLight;
+    DirLight dirLight;
     ProgramState()
             : camera(glm::vec3(-9.0f, 3.0f, -12.0f)) {}
 
@@ -215,7 +223,13 @@ int main() {
 
     pointLight.constant = 1.0f;
     pointLight.linear = 0.09f;
-    pointLight.quadratic = 0.032f;
+    pointLight.quadratic = 3.0f; // 0.032f;
+
+    DirLight& dirLight = programState->dirLight;
+    dirLight.direction = glm::vec3(-1.0f, 173.8f, -35.3f); // -1.0f, -0.2f, -2.3f
+    dirLight.ambient =   glm::vec3(0.05f, 0.05f, 0.20f);
+    dirLight.diffuse =   glm::vec3( 0.4f, 0.4f, 0.6f);
+    dirLight.specular =  glm::vec3(0.5f, 0.5f, 0.7f);
 
     float terrainVertices[] = {
             // positions                             //normals                       // texture Coords (swapped y coordinates because texture is flipped upside down)
@@ -344,8 +358,8 @@ int main() {
     glm::mat4 *modelMatrices;
     modelMatrices = new glm::mat4[amount];
     srand(glfwGetTime()); // initialize random seed
-    float radius = 50.0f; // r = 50.0f i o = 10.0f je okej sa amount = 10 // amount = 100, radius = 50.0f, offset = 100.0f
-    float offset = 100.0f;
+    float radius = 50.0f; // r = 50.0f i o = 10.0f je okej sa amount = 100 // amount = 100, radius = 45.0f, offset = 100.0f
+    float offset = 20.0f;
     for(unsigned int i = 0; i < amount; i++)
     {
         glm::mat4 model = glm::mat4(1.0f);
@@ -401,7 +415,6 @@ int main() {
         glBindVertexArray(0);
     }
 
-
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window)) {
@@ -424,10 +437,10 @@ int main() {
         // don't forget to enable shader before setting uniforms
         entityShader.use();
         //directional light
-        entityShader.setVec3("dirLight.direction", -1.0f, -0.2f, -0.3f);
-        entityShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.20f);
-        entityShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.6f);
-        entityShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.7f);
+        entityShader.setVec3("dirLight.direction", dirLight.direction);
+        entityShader.setVec3("dirLight.ambient", dirLight.ambient);
+        entityShader.setVec3("dirLight.diffuse", dirLight.diffuse);
+        entityShader.setVec3("dirLight.specular", dirLight.specular);
         //point light
         entityShader.setVec3("pointLight.position", pointLight.position);
         entityShader.setVec3("pointLight.ambient", pointLight.ambient);
@@ -457,14 +470,6 @@ int main() {
         entityShader.setMat4("projection", projection);
         entityShader.setMat4("view", view);
 
-
-        // Render loaded grass model
-//        model = glm::mat4(1.0f);
-//        model = glm::translate(model,
-//                               glm::vec3(1.0f,1.0f,1.0f)); // translate it down so it's at the center of the scene
-//        model = glm::scale(model, glm::vec3(1.0f));    // it's a bit too big for our scene, so scale it down
-//        entityShader.setMat4("model", model);
-//        grassModel.Draw(entityShader);
 
         //Render loaded tent model
         glm::mat4 model = glm::mat4(1.0f);
@@ -530,18 +535,15 @@ int main() {
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
-
-
-
         // Render instanced trees
         instancedShader.use();
 
 
         //directional light
-        instancedShader.setVec3("dirLight.direction", -1.0f, -0.2f, -0.3f);
-        instancedShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.20f);
-        instancedShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.6f);
-        instancedShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.7f);
+        instancedShader.setVec3("dirLight.direction", dirLight.direction);
+        instancedShader.setVec3("dirLight.ambient", dirLight.ambient);
+        instancedShader.setVec3("dirLight.diffuse", dirLight.diffuse);
+        instancedShader.setVec3("dirLight.specular", dirLight.specular);
         //point light
         instancedShader.setVec3("pointLight.position", pointLight.position);
         instancedShader.setVec3("pointLight.ambient", pointLight.ambient);
@@ -567,6 +569,11 @@ int main() {
         instancedShader.setMat4("projection", projection);
         instancedShader.setMat4("view", view);
         instancedShader.setInt("texture_diffuse1", 0); // Neophodno jer nema .Draw nego glDrawElements
+
+
+        instancedShader.setVec3("lightColor", glm::vec3(150.0f,88.0f,34.0f));
+
+
         glActiveTexture(GL_TEXTURE0); // Neophodno jer nema .Draw nego glDrawElements
         /*
             Ako pretpostavimo da je model zapravo skup od 4 drveta, taj skup sadrzi 4 debla i 4 grane npr.
@@ -590,9 +597,6 @@ int main() {
             glBindVertexArray(0);
 
         }
-
-
-
 
         // draw skybox as last
         glDepthFunc(GL_LEQUAL); // change depth function so depth test passes when values are equal to depth buffer's content
@@ -711,9 +715,15 @@ void DrawImGui(ProgramState *programState) {
         ImGui::Text("Hello text");
         ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
+        ImGui::Text("PointLight:");
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 3.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 3.0);
         ImGui::DragFloat("pointLight.quadratic", &programState->pointLight.quadratic, 0.05, 0.0, 3.0);
+        ImGui::Text("DirLight:");
+        ImGui::DragFloat3("dirLight.direction", (float*)&programState->dirLight.direction);
+        ImGui::DragFloat3("dirLight.ambient",  (float*)  &programState->dirLight.ambient);
+        ImGui::DragFloat3("dirLight.diffuse", (float*) &programState->dirLight.diffuse);
+        ImGui::DragFloat3("dirLight.specular",(float*) &programState->dirLight.specular);
         ImGui::Text("Tent:");
         ImGui::DragFloat3("Tent position", (float*)&programState->tentPosition);
         ImGui::DragFloat("Tent rotation", &programState->tentRotation, 1.0, 0, 360);
