@@ -178,6 +178,11 @@ int main() {
     // -------------------------
     Shader entityShader("resources/shaders/entity_lighting.vs", "resources/shaders/entity_lighting.fs");
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
+
+
+    Shader instancedShader("resources/shaders/instanced.vs", "resources/shaders/instanced.fs");
+
+
     // load models
     // -----------
     // Tree model
@@ -211,17 +216,6 @@ int main() {
     pointLight.constant = 1.0f;
     pointLight.linear = 0.09f;
     pointLight.quadratic = 0.032f;
-
-//    float terrainVertices[] = {
-//            // positions                             //normals                       // texture Coords (swapped y coordinates because texture is flipped upside down)
-//            25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 0.0f,
-//            -25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-//            -25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f,
-//
-//            25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 0.0f,
-//            -25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f,
-//            25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 20.0f
-//    };
 
     float terrainVertices[] = {
             // positions                             //normals                       // texture Coords (swapped y coordinates because texture is flipped upside down)
@@ -343,6 +337,71 @@ int main() {
     };
     unsigned int cubemapTexture = loadCubemap(faces);
 
+
+    // Instancing //
+
+    unsigned int amount = 100;
+    glm::mat4 *modelMatrices;
+    modelMatrices = new glm::mat4[amount];
+    srand(glfwGetTime()); // initialize random seed
+    float radius = 50.0f; // r = 50.0f i o = 10.0f je okej sa amount = 10 // amount = 100, radius = 50.0f, offset = 100.0f
+    float offset = 100.0f;
+    for(unsigned int i = 0; i < amount; i++)
+    {
+        glm::mat4 model = glm::mat4(1.0f);
+        // 1. translation: displace along circle with 'radius' in range [-offset, offset]
+        float angle = (float)i / (float)amount * 360.0f;
+        float displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float x = sin(angle) * radius + displacement;
+//        displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        // float y = displacement * 0.4f; // keep height of field smaller compared to width of x and z
+        displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float z = cos(angle) * radius + displacement;
+        model = glm::translate(model, glm::vec3(x, 0.0f, z));
+
+        // 2. scale: scale between 0.05 and 0.25f
+//        float scale = (rand() % 20) / 100.0f + 0.05;
+//        model = glm::scale(model, glm::vec3(scale));
+
+        // 3. rotation: add random rotation around a (semi)randomly picked rotation axis vector
+//        float rotAngle = (rand() % 360);
+//        model = glm::rotate(model, rotAngle, glm::vec3(0.4f, 0.6f, 0.8f));
+
+        // 4. now add to list of matrices
+        modelMatrices[i] = model;
+    }
+
+    unsigned int buffer;
+    glGenBuffers(1, &buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glBufferData(GL_ARRAY_BUFFER, amount * sizeof(glm::mat4), &modelMatrices[0], GL_STATIC_DRAW);
+
+    for(unsigned int i = 0; i < treeModel.meshes.size(); i++)
+    {
+        unsigned int VAO = treeModel.meshes[i].VAO;
+        glBindVertexArray(VAO);
+
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
+
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
+
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
+
+        glEnableVertexAttribArray(6);
+        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
+
+        glVertexAttribDivisor(3, 1);
+        glVertexAttribDivisor(4, 1);
+        glVertexAttribDivisor(5, 1);
+        glVertexAttribDivisor(6, 1);
+
+        glBindVertexArray(0);
+    }
+
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window)) {
@@ -398,14 +457,7 @@ int main() {
         entityShader.setMat4("projection", projection);
         entityShader.setMat4("view", view);
 
-        // Render loaded tree model
-        glm::mat4 model = glm::mat4(1.0f);
-//        model = glm::translate(model,
-//                               programState->backpackPosition); // translate it down so it's at the center of the scene
-//        model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
-//        entityShader.setMat4("model", model);
-//        treeModel.Draw(entityShader);
-//
+
         // Render loaded grass model
 //        model = glm::mat4(1.0f);
 //        model = glm::translate(model,
@@ -415,7 +467,7 @@ int main() {
 //        grassModel.Draw(entityShader);
 
         //Render loaded tent model
-        model = glm::mat4(1.0f);
+        glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model,
                                programState->tentPosition);
         model = glm::rotate(model, glm::radians(programState->tentRotation), glm::vec3(0,1,0));
@@ -468,6 +520,7 @@ int main() {
         entityShader.setMat4("model", model);
         log2Model.Draw(entityShader);
 
+
         //Loading terrain
         glActiveTexture(GL_TEXTURE0);
         glBindVertexArray(terrainVAO);
@@ -475,6 +528,72 @@ int main() {
         model = glm::mat4(1.0f);
         entityShader.setMat4("model", model);
         glDrawArrays(GL_TRIANGLES, 0, 6);
+
+
+
+
+
+        // Render instanced trees
+        instancedShader.use();
+
+
+        //directional light
+        instancedShader.setVec3("dirLight.direction", -1.0f, -0.2f, -0.3f);
+        instancedShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.20f);
+        instancedShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.6f);
+        instancedShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.7f);
+        //point light
+        instancedShader.setVec3("pointLight.position", pointLight.position);
+        instancedShader.setVec3("pointLight.ambient", pointLight.ambient);
+        instancedShader.setVec3("pointLight.diffuse", pointLight.diffuse);
+        instancedShader.setVec3("pointLight.specular", pointLight.specular);
+        instancedShader.setFloat("pointLight.constant", pointLight.constant);
+        instancedShader.setFloat("pointLight.linear", pointLight.linear);
+        instancedShader.setFloat("pointLight.quadratic", pointLight.quadratic);
+        //spotlight (turn on if u want flashlight)
+        instancedShader.setVec3("spotLight.position", programState->camera.Position);
+        instancedShader.setVec3("spotLight.direction", programState->camera.Front);
+        instancedShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
+        instancedShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
+        instancedShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
+        instancedShader.setFloat("spotLight.constant", 1.0f);
+        instancedShader.setFloat("spotLight.linear", 0.09);
+        instancedShader.setFloat("spotLight.quadratic", 0.032);
+        instancedShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+        instancedShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
+        instancedShader.setVec3("viewPos", programState->camera.Position);
+        instancedShader.setInt("blinn", blinn);
+        instancedShader.setFloat("material.shininess", 32.0f);
+        instancedShader.setMat4("projection", projection);
+        instancedShader.setMat4("view", view);
+        instancedShader.setInt("texture_diffuse1", 0); // Neophodno jer nema .Draw nego glDrawElements
+        glActiveTexture(GL_TEXTURE0); // Neophodno jer nema .Draw nego glDrawElements
+        /*
+            Ako pretpostavimo da je model zapravo skup od 4 drveta, taj skup sadrzi 4 debla i 4 grane npr.
+            i to bi onda bilo treeModel.meshes.size() = 8.
+            Za i = 0, prvo ce se povezati tekstura grane, bindovati VAO, i onda ce DrawElementsInstanced
+            da iscrta za 10 (amount = 10) modela grane na njihovom prvom meshu (prvom drvetu u skupu/modelu).
+
+            Onda ce za i = 1 da iscrta deblo za prvi mesh/drvo u skupu/modelu, onda opet za i=2 granu, i=3 deblo itd.
+         */
+        for(unsigned int i = 0; i < treeModel.meshes.size(); i++)
+        {
+            if(i % 2 == 0)
+                glBindTexture(GL_TEXTURE_2D, treeModel.textures_loaded[0].id); // Stavlja aktiviranu teksturu
+             else
+                glBindTexture(GL_TEXTURE_2D, treeModel.textures_loaded[2].id);
+            glBindVertexArray(treeModel.meshes[i].VAO); // Binduje model sa aktivnom teksturom
+
+            glDrawElementsInstanced(
+                        GL_TRIANGLES, treeModel.meshes[i].indices.size(), GL_UNSIGNED_INT, 0, amount
+            );
+            glBindVertexArray(0);
+
+        }
+
+
+
+
         // draw skybox as last
         glDepthFunc(GL_LEQUAL); // change depth function so depth test passes when values are equal to depth buffer's content
         skyboxShader.use();
