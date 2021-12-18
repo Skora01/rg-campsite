@@ -232,7 +232,7 @@ int main() {
     dirLight.specular =  glm::vec3(0.5f, 0.5f, 0.7f);
 
     float terrainVertices[] = {
-            // positions                             //normals                       // texture Coords (swapped y coordinates because texture is flipped upside down)
+            // positions             //normals           // texture coords
             25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 0.0f,
             -25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f,
             -25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
@@ -414,6 +414,57 @@ int main() {
 
         glBindVertexArray(0);
     }
+
+    amount = 500;
+    radius = 10.0f;
+    offset = 15.0f;
+    modelMatrices = new glm::mat4[amount];
+    srand(glfwGetTime()); // initialize random seed
+    for(unsigned int i = 0; i < amount; i++)
+    {
+        glm::mat4 model = glm::mat4(1.0f);
+
+        float angle = (float)i / (float)amount * 360.0f;
+        float displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float x = sin(angle) * radius + displacement;
+        displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
+        float z = cos(angle) * radius + displacement;
+        model = glm::translate(model, glm::vec3(x, 0.0f, z));
+
+        modelMatrices[i] = model;
+    }
+
+    unsigned int buffer2;
+    glGenBuffers(1, &buffer2);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer2);
+    glBufferData(GL_ARRAY_BUFFER, amount * sizeof(glm::mat4), &modelMatrices[0], GL_STATIC_DRAW);
+
+
+    for(unsigned int i = 0; i < grassModel.meshes.size(); i++)
+    {
+        unsigned int VAO = grassModel.meshes[i].VAO;
+        glBindVertexArray(VAO);
+
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)0);
+
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(sizeof(glm::vec4)));
+
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
+
+        glEnableVertexAttribArray(6);
+        glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
+
+        glVertexAttribDivisor(3, 1);
+        glVertexAttribDivisor(4, 1);
+        glVertexAttribDivisor(5, 1);
+        glVertexAttribDivisor(6, 1);
+
+        glBindVertexArray(0);
+    }
+
 
     // render loop
     // -----------
@@ -597,6 +648,21 @@ int main() {
             glBindVertexArray(0);
 
         }
+
+        for(unsigned int i = 0; i < grassModel.meshes.size(); i++)
+        {
+
+            glBindTexture(GL_TEXTURE_2D, grassModel.textures_loaded[0].id);
+
+            glBindVertexArray(grassModel.meshes[i].VAO);
+
+            glDrawElementsInstanced(
+                        GL_TRIANGLES, grassModel.meshes[i].indices.size(), GL_UNSIGNED_INT, 0, amount
+            );
+            glBindVertexArray(0);
+
+        }
+
 
         // draw skybox as last
         glDepthFunc(GL_LEQUAL); // change depth function so depth test passes when values are equal to depth buffer's content
