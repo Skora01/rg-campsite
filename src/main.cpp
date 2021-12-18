@@ -30,6 +30,8 @@ unsigned int loadTexture(char const * path);
 
 unsigned int loadCubemap(vector<std::string> faces);
 
+void renderTerrain();
+
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -187,9 +189,10 @@ int main() {
     Shader entityShader("resources/shaders/entity_lighting.vs", "resources/shaders/entity_lighting.fs");
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
 
-
     Shader instancedShader("resources/shaders/instanced.vs", "resources/shaders/instanced.fs");
 
+
+    Shader terrainShader("resources/shaders/terrain.vs", "resources/shaders/terrain.fs");
 
     // load models
     // -----------
@@ -225,22 +228,13 @@ int main() {
     pointLight.linear = 0.09f;
     pointLight.quadratic = 3.0f; // 0.032f;
 
+
     DirLight& dirLight = programState->dirLight;
     dirLight.direction = glm::vec3(-1.0f, 173.8f, -35.3f); // -1.0f, -0.2f, -2.3f
     dirLight.ambient =   glm::vec3(0.05f, 0.05f, 0.20f);
     dirLight.diffuse =   glm::vec3( 0.4f, 0.4f, 0.6f);
     dirLight.specular =  glm::vec3(0.5f, 0.5f, 0.7f);
 
-    float terrainVertices[] = {
-            // positions             //normals           // texture coords
-            25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 0.0f,
-            -25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f,
-            -25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-
-            25.0f,  0.0f,  25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 0.0f,
-            25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 20.0f, 20.0f,
-            -25.0f,  0.0f, -25.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f
-    };
 
     float skyboxVertices[] = {
             // positions
@@ -287,43 +281,6 @@ int main() {
             1.0f, -1.0f,  1.0f
     };
 
-    float transparentVertices[] = {
-            // positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
-            0.0f,  0.5f,  0.0f, 0.0f, 1.0f, 0.0f,  0.0f,  0.0f,
-            0.0f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,   0.0f,  1.0f,
-            1.0f, -0.5f,0.0f, 0.0f, 1.0f, 0.0f,   1.0f,  1.0f,
-
-            0.0f,  0.5f,  0.0f,0.0f, 1.0f, 0.0f,  0.0f,  0.0f,
-            1.0f, -0.5f,  0.0f,0.0f, 1.0f, 0.0f,  1.0f,  1.0f,
-            1.0f,  0.5f,  0.0f,0.0f, 1.0f, 0.0f,  1.0f,  0.0f
-    };
-    //terrain  VAO,VBO
-    unsigned int terrainVAO, terrainVBO;
-    glGenVertexArrays(1, &terrainVAO);
-    glGenBuffers(1, &terrainVBO);
-    glBindVertexArray(terrainVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, terrainVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(terrainVertices), &terrainVertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(6* sizeof(float)));
-    glEnableVertexAttribArray(2);
-
-    unsigned int transparentVAO, transparentVBO;
-    glGenVertexArrays(1, &transparentVAO);
-    glGenBuffers(1, &transparentVBO);
-    glBindVertexArray(transparentVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), &transparentVertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(6* sizeof(float)));
-    glEnableVertexAttribArray(2);
-    glBindVertexArray(0);
     //skybox VAO,VBO
     unsigned int skyboxVAO, skyboxVBO;
     glGenVertexArrays(1, &skyboxVAO);
@@ -335,7 +292,8 @@ int main() {
     glEnableVertexAttribArray(0);
     //load textures
     //------------
-    unsigned int terrainTexture = loadTexture(FileSystem::getPath("/resources/textures/terrain.jpeg").c_str());
+    unsigned int terrainTexture = loadTexture(FileSystem::getPath("resources/textures/terrain.jpeg").c_str());
+    unsigned int terrainNormal  = loadTexture(FileSystem::getPath("resources/textures/terrain_normal.jpeg").c_str());
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
@@ -488,11 +446,15 @@ int main() {
         // don't forget to enable shader before setting uniforms
         entityShader.use();
         //directional light
+
         entityShader.setVec3("dirLight.direction", dirLight.direction);
+        // entityShader.setVec3("dirLight.direction", -1.0f, -0.2f, -0.3f);
         entityShader.setVec3("dirLight.ambient", dirLight.ambient);
         entityShader.setVec3("dirLight.diffuse", dirLight.diffuse);
         entityShader.setVec3("dirLight.specular", dirLight.specular);
+        // point light norm = normalize(norm);
         //point light
+
         entityShader.setVec3("pointLight.position", pointLight.position);
         entityShader.setVec3("pointLight.ambient", pointLight.ambient);
         entityShader.setVec3("pointLight.diffuse", pointLight.diffuse);
@@ -520,6 +482,23 @@ int main() {
                                                 (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
         entityShader.setMat4("projection", projection);
         entityShader.setMat4("view", view);
+
+
+//        // Render loaded tree model
+//        glm::mat4 model = glm::mat4(1.0f);
+//        model = glm::translate(model,
+//                               programState->logPosition); // translate it down so it's at the center of the scene
+//        model = glm::scale(model, glm::vec3(1.0f));    // it's a bit too big for our scene, so scale it down
+//        entityShader.setMat4("model", model);
+//        treeModel.Draw(entityShader);
+
+//         //Render loaded grass model
+//        model = glm::mat4(1.0f);
+//        model = glm::translate(model,
+//                               glm::vec3(1.0f,1.0f,1.0f)); // translate it down so it's at the center of the scene
+//        model = glm::scale(model, glm::vec3(1.0f));    // it's a bit too big for our scene, so scale it down
+//        entityShader.setMat4("model", model);
+//        grassModel.Draw(entityShader);
 
 
         //Render loaded tent model
@@ -578,12 +557,52 @@ int main() {
 
 
         //Loading terrain
-        glActiveTexture(GL_TEXTURE0);
-        glBindVertexArray(terrainVAO);
-        glBindTexture(GL_TEXTURE_2D, terrainTexture);
+        terrainShader.use();
+        terrainShader.setInt("terrainTexture", 0);
+        terrainShader.setInt("terrainNormal", 1);
+        terrainShader.setMat4("projection", projection);
+        terrainShader.setMat4("view", view);
+        terrainShader.setVec3("dirLight.direction", -1.0f, -0.2f, -0.3f);
+        terrainShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.20f);
+        terrainShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.6f);
+        terrainShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.7f);
+        terrainShader.setVec3("pointLight.position", pointLight.position);
+        terrainShader.setVec3("pointLight.ambient", pointLight.ambient);
+        terrainShader.setVec3("pointLight.diffuse", pointLight.diffuse);
+        terrainShader.setVec3("pointLight.specular", pointLight.specular);
+        terrainShader.setFloat("pointLight.constant", pointLight.constant);
+        terrainShader.setFloat("pointLight.linear", pointLight.linear);
+        terrainShader.setFloat("pointLight.quadratic", pointLight.quadratic);
+        //spotlight (turn on if u want flashlight)
+        terrainShader.setVec3("spotLight.position", programState->camera.Position);
+        terrainShader.setVec3("spotLight.direction", programState->camera.Front);
+        terrainShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
+        terrainShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
+        terrainShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
+        terrainShader.setFloat("spotLight.constant", 1.0f);
+        terrainShader.setFloat("spotLight.linear", 0.09);
+        terrainShader.setFloat("spotLight.quadratic", 0.032);
+        terrainShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+        terrainShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
+        terrainShader.setVec3("viewPos", programState->camera.Position);
+        terrainShader.setVec3("lightColor", glm::vec3(150.0f,88.0f,34.0f));
+        terrainShader.setInt("blinn", blinn);
+
+        // render normal-mapped quad
         model = glm::mat4(1.0f);
-        entityShader.setMat4("model", model);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        //model = glm::rotate(model, glm::radians((float)glfwGetTime() * -10.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0))); // rotate the quad to show normal mapping from multiple directions
+        terrainShader.setMat4("model", model);
+        terrainShader.setVec3("viewPos", programState->camera.Position);
+        terrainShader.setVec3("lightPos", programState->pointLight.position);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, terrainTexture);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, terrainNormal);
+        renderTerrain();
+
+//        // Sta je ovo? Ostalo od merge-a nekog
+//        entityShader.setMat4("model", model);
+//        glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
         // Render instanced trees
@@ -860,7 +879,7 @@ unsigned int loadTexture(char const * path)
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT ); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -907,3 +926,96 @@ unsigned int loadCubemap(vector<std::string> faces)
 
     return textureID;
 }
+
+//Normal mapping for terrain
+unsigned int terrainVAO = 0;
+unsigned int terrainVBO;
+void renderTerrain()
+{
+
+    if (terrainVAO == 0)
+    {
+        // positions
+        glm::vec3 pos1(25.0f,  0.0f, 25.0f);
+        glm::vec3 pos2(-25.0f, 0.0f, -25.0f);
+        glm::vec3 pos3( -25.0f, 0.0f, 25.0f);
+        glm::vec3 pos4( 25.0f,  0.0f, -25.0f);
+        // texture coordinates
+        glm::vec2 uv1(20.0f, 0.0f);
+        glm::vec2 uv2(0.0f, 20.0f);
+        glm::vec2 uv3(0.0f, 0.0f);
+        glm::vec2 uv4(20.0f, 20.0f);
+        // normal vector
+        glm::vec3 nm(0.0f, 1.0f, 0.0f);
+
+        // calculate tangent/bitangent vectors of both triangles
+        glm::vec3 tangent1, bitangent1;
+        glm::vec3 tangent2, bitangent2;
+        // triangle 1
+        // ----------
+        glm::vec3 edge1 = pos2 - pos1;
+        glm::vec3 edge2 = pos3 - pos1;
+        glm::vec2 deltaUV1 = uv2 - uv1;
+        glm::vec2 deltaUV2 = uv3 - uv1;
+
+        float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+        tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+        tangent1.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+        tangent1.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+        bitangent1.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+        bitangent1.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+        bitangent1.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
+        // triangle 2
+        // ----------
+        edge1 = pos3 - pos1;
+        edge2 = pos4 - pos1;
+        deltaUV1 = uv3 - uv1;
+        deltaUV2 = uv4 - uv1;
+
+        f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+        tangent2.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+        tangent2.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+        tangent2.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+
+        bitangent2.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+        bitangent2.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+        bitangent2.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
+
+        float terrainVertices[] = {
+                // positions            // normal         // texcoords  // tangent                          // bitangent
+                pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+                pos2.x, pos2.y, pos2.z, nm.x, nm.y, nm.z, uv2.x, uv2.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+                pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+
+                pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
+                pos4.x, pos4.y, pos4.z, nm.x, nm.y, nm.z, uv4.x, uv4.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
+                pos2.x, pos2.y, pos2.z, nm.x, nm.y, nm.z, uv2.x, uv4.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z
+        };
+        // configure terrain VAO
+        glGenVertexArrays(1, &terrainVAO);
+        glGenBuffers(1, &terrainVBO);
+        glBindVertexArray(terrainVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, terrainVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(terrainVertices), &terrainVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(6 * sizeof(float)));
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(8 * sizeof(float)));
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(11 * sizeof(float)));
+    }
+    glBindVertexArray(terrainVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
+}
+
