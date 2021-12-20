@@ -8,11 +8,9 @@ layout (location = 4) in vec3 aBitangent;
 
 out vec3 FragPos;
 out vec2 TexCoords;
-out vec3 TangentLightPos;
 out vec3 TangentViewPos;
 out vec3 TangentFragPos;
 out mat3 TBN;
-
 
 uniform mat4 projection;
 uniform mat4 view;
@@ -26,6 +24,7 @@ void main()
     
     mat3 normalMatrix = transpose(inverse(mat3(model)));
     vec3 T = normalize(normalMatrix * aTangent);
+   // vec3 B = normalize(mat3(model) * aBitangent);
     vec3 N = normalize(normalMatrix * aNormal);
     T = normalize(T - dot(T, N) * N);
     vec3 B = cross(N, T);

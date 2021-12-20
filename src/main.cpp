@@ -38,6 +38,7 @@ const unsigned int SCR_HEIGHT = 600;
 bool blinn = false;
 bool blinnKeyPressed = false;
 bool freeCamKeyPressed = false;
+float heightScale = 0.1;
 
 // camera
 
@@ -273,6 +274,8 @@ int main() {
     //------------
     unsigned int terrainTexture = loadTexture(FileSystem::getPath("resources/textures/terrain.jpeg").c_str());
     unsigned int terrainNormal  = loadTexture(FileSystem::getPath("resources/textures/terrain_normal.jpeg").c_str());
+    unsigned int terrainSpecular = loadTexture(FileSystem::getPath("resources/textures/terrain_metallic.jpeg").c_str());
+    unsigned int terrainHeight = loadTexture(FileSystem::getPath("resources/textures/terrain_height.jpeg").c_str());
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
@@ -417,6 +420,8 @@ int main() {
         terrainShader.use();
         terrainShader.setInt("terrainTexture", 0);
         terrainShader.setInt("terrainNormal", 1);
+        terrainShader.setInt("terrainHeight",2);
+        terrainShader.setInt("terrainSpecular", 3);
         terrainShader.setMat4("projection", projection);
         terrainShader.setMat4("view", view);
         terrainShader.setVec3("dirLight.direction", -1.0f, -0.2f, -0.3f);
@@ -444,16 +449,18 @@ int main() {
         terrainShader.setVec3("viewPos", programState->camera.Position);
         terrainShader.setVec3("lightColor", glm::vec3(150.0f,88.0f,34.0f));
         terrainShader.setInt("blinn", blinn);
-        // render normal-mapped quad
+        // render normal-mapped terrain
         model = glm::mat4(1.0f);
-        //model = glm::rotate(model, glm::radians((float)glfwGetTime() * -10.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0))); // rotate the quad to show normal mapping from multiple directions
         terrainShader.setMat4("model", model);
-        terrainShader.setVec3("viewPos", programState->camera.Position);
-        terrainShader.setVec3("lightPos", programState->pointLight.position);
+        terrainShader.setFloat("height_scale", heightScale);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, terrainTexture);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, terrainNormal);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, terrainHeight);
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, terrainSpecular);
         renderTerrain();
 
         // draw skybox as last
@@ -507,27 +514,34 @@ void processInput(GLFWwindow *window) {
         programState->camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         programState->camera.ProcessKeyboard(RIGHT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS && !freeCamKeyPressed)
-    {
+    if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS && !freeCamKeyPressed) {
         programState->camera.freeCam = !programState->camera.freeCam;
         freeCamKeyPressed = true;
     }
-    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_RELEASE)
-    {
+    if (glfwGetKey(window, GLFW_KEY_T) == GLFW_RELEASE) {
         freeCamKeyPressed = false;
     }
     //turning on Blinn-Phong lighting
-    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !blinnKeyPressed)
-    {
+    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !blinnKeyPressed) {
         blinn = !blinn;
         blinnKeyPressed = true;
     }
-    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE)
-    {
+    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE) {
         blinnKeyPressed = false;
     }
+    //heightScale for parallax mapping
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+        if (heightScale > 0.0f)
+            heightScale -= 0.0005f;
+        else
+            heightScale = 0.0f;
+    } else if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+        if (heightScale < 1.0f)
+            heightScale += 0.0005f;
+        else
+            heightScale = 1.0f;
+    }
 }
-
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
 // ---------------------------------------------------------------------------------------------
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
@@ -704,16 +718,16 @@ void renderTerrain()
     {
         // positions
         glm::vec3 pos1(25.0f,  0.0f, 25.0f);
-        glm::vec3 pos2(-25.0f, 0.0f, -25.0f);
-        glm::vec3 pos3( -25.0f, 0.0f, 25.0f);
-        glm::vec3 pos4( 25.0f,  0.0f, -25.0f);
+        glm::vec3 pos2(25.0f, 0.0f, -25.0f);
+        glm::vec3 pos3( -25.0f, 0.0f, -25.0f);
+        glm::vec3 pos4( -25.0f,  0.0f, 25.0f);
         // texture coordinates
-        glm::vec2 uv1(20.0f, 0.0f);
-        glm::vec2 uv2(0.0f, 20.0f);
-        glm::vec2 uv3(0.0f, 0.0f);
+        glm::vec2 uv1(0.0f, 20.0f);
+        glm::vec2 uv2(0.0f, 0.0f);
+        glm::vec2 uv3(20.0f, 0.0f);
         glm::vec2 uv4(20.0f, 20.0f);
         // normal vector
-        glm::vec3 nm(0.0f, 1.0f, 0.0f);
+        glm::vec3 nm(0.0f, 0.0f, 1.0f);
 
         // calculate tangent/bitangent vectors of both triangles
         glm::vec3 tangent1, bitangent1;
@@ -730,11 +744,11 @@ void renderTerrain()
         tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
         tangent1.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
         tangent1.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
-
+        tangent1 = glm::normalize(tangent1);
         bitangent1.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
         bitangent1.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
         bitangent1.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
-
+        bitangent1 = glm::normalize(bitangent1);
         // triangle 2
         // ----------
         edge1 = pos3 - pos1;
@@ -747,12 +761,12 @@ void renderTerrain()
         tangent2.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
         tangent2.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
         tangent2.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
-
+        tangent2 = glm::normalize(tangent2);
 
         bitangent2.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
         bitangent2.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
         bitangent2.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
-
+        bitangent2 = glm::normalize(bitangent2);
 
         float terrainVertices[] = {
                 // positions            // normal         // texcoords  // tangent                          // bitangent
@@ -761,8 +775,8 @@ void renderTerrain()
                 pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
 
                 pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
-                pos4.x, pos4.y, pos4.z, nm.x, nm.y, nm.z, uv4.x, uv4.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
-                pos2.x, pos2.y, pos2.z, nm.x, nm.y, nm.z, uv2.x, uv4.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z
+                pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
+                pos4.x, pos4.y, pos4.z, nm.x, nm.y, nm.z, uv4.x, uv4.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z
         };
         // configure terrain VAO
         glGenVertexArrays(1, &terrainVAO);

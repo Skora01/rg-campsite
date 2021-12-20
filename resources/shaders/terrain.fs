@@ -48,13 +48,61 @@ uniform DirLight dirLight;
 uniform PointLight pointLight;
 uniform SpotLight spotLight;
 uniform vec3 lightColor;
+
 uniform sampler2D terrainTexture;
 uniform sampler2D terrainNormal;
+uniform sampler2D terrainHeight;
+uniform sampler2D terrainSpecular;
 
+uniform float height_scale;
 uniform bool blinn;
 uniform vec3 viewPos;
 
-vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
+vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
+{
+//     float height =  texture(terrainHeight, texCoords).r;
+//     vec2 p = viewDir.xy / viewDir.z * (height * height_scale);
+//     return texCoords - p;
+        // number of depth layers
+    const float minLayers = 8;
+    const float maxLayers = 32;
+    float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));
+    // calculate the size of each layer
+    float layerDepth = 1.0 / numLayers;
+    // depth of current layer
+    float currentLayerDepth = 0.0;
+    // the amount to shift the texture coordinates per layer (from vector P)
+    vec2 P = viewDir.xy * height_scale;
+    vec2 deltaTexCoords = P / numLayers;
+
+    // get initial values
+    vec2  currentTexCoords     = texCoords;
+    float currentDepthMapValue = texture(terrainHeight, currentTexCoords).r;
+
+    while(currentLayerDepth < currentDepthMapValue)
+    {
+        // shift texture coordinates along direction of P
+        currentTexCoords -= deltaTexCoords;
+        // get depthmap value at current texture coordinates
+        currentDepthMapValue = texture(terrainHeight, currentTexCoords).r;
+        // get depth of next layer
+        currentLayerDepth += layerDepth;
+    }
+    // get texture coordinates before collision (reverse operations)
+    vec2 prevTexCoords = currentTexCoords + deltaTexCoords;
+
+    // get depth after and before collision for linear interpolation
+    float afterDepth  = currentDepthMapValue - currentLayerDepth;
+    float beforeDepth = texture(terrainHeight, prevTexCoords).r - currentLayerDepth + layerDepth;
+
+    // interpolation of texture coordinates
+    float weight = afterDepth / (afterDepth - beforeDepth);
+    vec2 finalTexCoords = prevTexCoords * weight + currentTexCoords * (1.0 - weight);
+
+    return finalTexCoords;
+}
+
+vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec2 texCoords)
 {
     vec3 lightDir = normalize(-light.direction);
     // diffuse shading
@@ -72,14 +120,14 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
         spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
     }
     // combine results
-    vec3 ambient = light.ambient * vec3(texture(terrainTexture, TexCoords));
-    vec3 diffuse = light.diffuse * diff * vec3(texture(terrainTexture, TexCoords));
-    vec3 specular = light.specular * spec;
+    vec3 ambient = light.ambient * vec3(texture(terrainTexture, texCoords));
+    vec3 diffuse = light.diffuse * diff * vec3(texture(terrainTexture, texCoords));
+    vec3 specular = light.specular * spec *  vec3(texture(terrainSpecular, texCoords));
     return (ambient + diffuse + specular);
 }
 
 // calculates the color when using a point light.
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec2 texCoords)
 {
     vec3 lightDir = normalize(light.position*TBN - fragPos);
     // diffuse shading
@@ -100,16 +148,16 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     float distance = length(light.position*TBN - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
     // combine results
-    vec3 ambient = light.ambient * vec3(texture(terrainTexture, TexCoords));
-    vec3 diffuse = light.diffuse * diff * vec3(texture(terrainTexture, TexCoords));
-    vec3 specular = light.specular * spec;
+    vec3 ambient = light.ambient * vec3(texture(terrainTexture, texCoords));
+    vec3 diffuse = light.diffuse * diff * vec3(texture(terrainTexture, texCoords));
+    vec3 specular = light.specular * spec * vec3(texture(terrainSpecular, texCoords).xxx);
     ambient *= attenuation;
     diffuse *= attenuation;
     specular *= attenuation;
     return (ambient + diffuse + specular)*lightColor;
 }
 
-vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
+vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec2 texCoords)
 {
     vec3 lightDir = normalize(light.position - fragPos);
     // diffuse shading
@@ -135,9 +183,9 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     float epsilon = light.cutOff - light.outerCutOff;
     float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
     // combine results
-    vec3 ambient = light.ambient * vec3(texture(terrainTexture, TexCoords));
-    vec3 diffuse = light.diffuse * diff * vec3(texture(terrainTexture, TexCoords));
-    vec3 specular = light.specular * spec;
+    vec3 ambient = light.ambient * vec3(texture(terrainTexture, texCoords));
+    vec3 diffuse = light.diffuse * diff * vec3(texture(terrainTexture, texCoords));
+    vec3 specular = light.specular * spec * vec3(texture(terrainSpecular, texCoords));
     ambient *= attenuation * intensity;
     diffuse *= attenuation * intensity;
     specular *= attenuation * intensity;
@@ -146,16 +194,18 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 
 void main()
 {
-    vec3 norm = texture(terrainNormal, TexCoords).rgb;
-    norm = normalize(norm * 2.0 - 1.0);
     vec3 viewDir = normalize(TangentViewPos - TangentFragPos);
+    //parallax mapping
+    vec2 texCoords = ParallaxMapping(TexCoords,  viewDir);
+    if(texCoords.x > 20.0 || texCoords.y > 20.0 || texCoords. x < -20.0 || texCoords.y < -20.0)
+        discard;
+    vec3 norm = texture(terrainNormal, texCoords).rgb;
+    norm = normalize(norm * 2.0 - 1.0);
     // phase 1: directional lighting
-    vec3 result = CalcDirLight(dirLight, norm, viewDir);
+    vec3 result = CalcDirLight(dirLight, norm, viewDir, texCoords);
     // phase 2: point lights
-    //for(int i = 0; i < NR_POINT_LIGHTS; i++)
-        result += CalcPointLight(pointLight, norm, TangentFragPos, viewDir);
+    result += CalcPointLight(pointLight, norm, TangentFragPos, viewDir, texCoords);
     // phase 3: spot light
-   result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
-   FragColor = vec4(result, 1.0);
+    result += CalcSpotLight(spotLight, norm, FragPos, viewDir, texCoords);
+    FragColor = vec4(result, 1.0);
 }
-
