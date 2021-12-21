@@ -601,9 +601,8 @@ int main() {
         glBindTexture(GL_TEXTURE_2D, terrainNormal);
         renderTerrain();
 
-//        // Sta je ovo? Ostalo od merge-a nekog
-//        entityShader.setMat4("model", model);
-//        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+
 
 
         // Render instanced trees
@@ -709,10 +708,12 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Da li je ovo neohpodno ako smo to vec uradili pre pravljenja naseg framebuffera? Mozda za svaki slucaj.
         hdrShader.use();
         glActiveTexture(GL_TEXTURE0); // Aktiviramo teksturu (== scenu)
+        glBindTexture(GL_TEXTURE_2D, colorBuffer);
         hdrShader.setInt("hdr", hdr);
         hdrShader.setFloat("exposure", exposure);
         renderQuad(); // Iscrtamo pravougaonik (preko celog ekrana) na koji je nalepljena tekstura
 
+         std::cout << "hdr: " << (hdr ? "on" : "off") << "| exposure: " << exposure << std::endl;
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
