@@ -34,8 +34,8 @@ void renderTerrain();
 
 void renderQuad();
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 1920; /* Ovo mnogo utice na kvalitet slike sada sa HDR jer se pravi tekstura sa ovom rezolucijom valjda. Takodje mora window manager u floating modu da radi*/
+const unsigned int SCR_HEIGHT = 1080;
 bool blinn = false;
 bool blinnKeyPressed = false;
 bool freeCamKeyPressed = false;

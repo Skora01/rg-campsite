@@ -13,7 +13,7 @@ void main()
     vec3 hdrColor = texture(hdrBuffer, TexCoords).rgb;
     if(hdr)
     {
-        // reinhard
+        // reinhard  // Moze i neki efikasniji algoritam mozda
          vec3 result = hdrColor / (hdrColor + vec3(1.0));
         // exposure
          result = vec3(1.0) - exp(-hdrColor * exposure); // Eksperimentisi sa plusevima
