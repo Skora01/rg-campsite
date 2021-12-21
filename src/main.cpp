@@ -4,6 +4,16 @@
 // ShaderLight je vrv nepotreban jer on generise ona svetla kod njega u primeru
 
 // hdrShader == shaderBloomFinal
+
+/* Proveri ovo iznad, takodje izgleda da postoje konflikti izmedju bloom-a i hdr-a i
+ * njihovih bool promenljivih jer dolazi do problema ako se oba odjednom upale izgleda
+ * BLOOM NE RADI NISTA BEZ HDR-A
+ */
+
+/* Cudni artefakti kada bloom radi i previse je blurovano sve umesto da bude samo vatra */
+
+/* Treba promeniti i instanced.fs verovatno, slicno kao entity.fs */
+
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -483,6 +493,7 @@ int main() {
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
             std::cout << "Framebuffer not complete!" << std::endl;
     }
+
     // Nismo unbindovali nas framebuffer !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     shaderBlur.use();
@@ -490,7 +501,7 @@ int main() {
 
     hdrShader.use();
     hdrShader.setInt("hdrBuffer", 0);
-
+    hdrShader.setInt("bloomBlur", 1);
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window)) {
@@ -690,7 +701,6 @@ int main() {
         instancedShader.setMat4("view", view);
         instancedShader.setInt("texture_diffuse1", 0); // Neophodno jer nema .Draw nego glDrawElements
 
-
         instancedShader.setVec3("lightColor", glm::vec3(150.0f,88.0f,34.0f));
 
 
@@ -756,9 +766,9 @@ int main() {
         // 2. We blur bright fragments with two-pass Gaussian Blur
         // --------------------------------------------------
         bool horizontal = true, first_iteration = true;
-        unsigned int amount = 10;
+        unsigned int amountBlur = 10;
         shaderBlur.use();
-        for (unsigned int i = 0; i < amount; i++)
+        for (unsigned int i = 0; i < amountBlur; i++)
         {
             glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
             shaderBlur.setInt("horizontal", horizontal);
