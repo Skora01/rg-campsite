@@ -155,7 +155,7 @@ void main()
 {
     // Fragment discarding
     float alpha = texture(material.diffuse, TexCoords).a;
-    if(alpha < 0.1)
+    if(alpha < 0.25)
         discard;
     // properties
 //     vec3 norm = normalize(Normal);

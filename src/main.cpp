@@ -663,12 +663,8 @@ int main() {
         renderTerrain();
 
 
-
-
-
         // Render instanced trees
         instancedShader.use();
-
 
         //directional light
         instancedShader.setVec3("dirLight.direction", dirLight.direction);
@@ -702,7 +698,6 @@ int main() {
         instancedShader.setInt("texture_diffuse1", 0); // Neophodno jer nema .Draw nego glDrawElements
 
         instancedShader.setVec3("lightColor", glm::vec3(150.0f,88.0f,34.0f));
-
 
         glActiveTexture(GL_TEXTURE0); // Neophodno jer nema .Draw nego glDrawElements
         /*
@@ -756,11 +751,10 @@ int main() {
         glBindVertexArray(0);
         glDepthFunc(GL_LESS); // set depth function back to default
 
-        if (programState->ImGuiEnabled)
-            DrawImGui(programState);
 
         // Unbindujemo nas framebuffer
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 
 
         // 2. We blur bright fragments with two-pass Gaussian Blur
@@ -804,6 +798,10 @@ int main() {
 
         std::cout << "hdr: " << (hdr ? "on" : "off") << "| exposure: " << exposure << std::endl;
         std::cout << "bloom: " << (bloom ? "on" : "off") << "| exposure: " << exposure << std::endl;
+
+        if (programState->ImGuiEnabled)
+            DrawImGui(programState);
+
          // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
