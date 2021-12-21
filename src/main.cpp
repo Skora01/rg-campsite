@@ -1,3 +1,9 @@
+
+// entity shader == shader // Proveri da li ce morati to sto se doda u entity da se dodaje i u instanced, vrv hoce
+
+// ShaderLight je vrv nepotreban jer on generise ona svetla kod njega u primeru
+
+// hdrShader == shaderBloomFinal
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -41,6 +47,8 @@ bool blinnKeyPressed = false;
 bool freeCamKeyPressed = false;
 bool hdr = true;
 bool hdrKeyPressed = false;
+bool bloom = true;
+bool bloomKeyPressed = false;
 float exposure = 1.0f;
 // camera
 
@@ -194,6 +202,8 @@ int main() {
     Shader instancedShader("resources/shaders/instanced.vs", "resources/shaders/instanced.fs");
     Shader terrainShader("resources/shaders/terrain.vs", "resources/shaders/terrain.fs");
     Shader hdrShader("resources/shaders/hdr.vs", "resources/shaders/hdr.fs");
+    Shader shaderBlur("resources/shaders/blur.vs", "resources/shaders/blur.fs");
+
     // load models
     // -----------
     // Tree model
@@ -416,27 +426,67 @@ int main() {
     // ------------------------------------
     unsigned int hdrFBO;
     glGenFramebuffers(1, &hdrFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO); // Nije bilo potrebno kod hdr-a
     // create floating point color buffer
-    unsigned int colorBuffer;
-    glGenTextures(1, &colorBuffer);
-    glBindTexture(GL_TEXTURE_2D, colorBuffer);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // unsigned int colorBuffer; - HDR
+    // glGenTextures(1, &colorBuffer);
+    unsigned int colorBuffers[2]; // FragColor i BrightColor
+    glGenTextures(2, colorBuffers);
+    for(unsigned int i = 0; i < 2; i++)
+    {
+        glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        // Attach texture to framebuffer
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers[i], 0);
+    }
     // create depth buffer (renderbuffer)
     unsigned int rboDepth;
     glGenRenderbuffers(1, &rboDepth);
     glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
-    // attach buffers
-    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
+    // attach buffers - HDR
+//    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+//    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
+
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+
+    // tell OpenGL which color attachments we'll use (of this framebuffer) for rendering
+    unsigned int attachments[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+    glDrawBuffers(2, attachments);
+
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "Framebuffer not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
+    // ping-pong-framebuffer for blurring
+    unsigned int pingpongFBO[2];
+    unsigned int pingpongColorbuffers[2];
+    glGenFramebuffers(2, pingpongFBO);
+    glGenTextures(2, pingpongColorbuffers);
+    for (unsigned int i = 0; i < 2; i++)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[i]);
+        glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // we clamp to the edge as the blur filter would otherwise sample repeated texture values!
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongColorbuffers[i], 0);
+        // also check if framebuffers are complete (no need for depth buffer)
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            std::cout << "Framebuffer not complete!" << std::endl;
+    }
+    // Nismo unbindovali nas framebuffer !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    shaderBlur.use();
+    shaderBlur.setInt("image", 0);
 
     hdrShader.use();
     hdrShader.setInt("hdrBuffer", 0);
@@ -457,7 +507,7 @@ int main() {
         glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // First we render the scene into the floating point framebuffer
+        // 1. We render the scene into the floating point framebuffer
         glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Zasto opet glClear? // Jer sada clearujemo/postavljamo vrednosti za nas framebuffer a gore smo za default
@@ -703,18 +753,48 @@ int main() {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-        // Sada renderujemo teksturu (== scenu) iz naseg framebuffera preko obicnog ali nakon
-        // sto je provucemo kroz tone mapping algoritam iz hdrShader.fs
+        // 2. We blur bright fragments with two-pass Gaussian Blur
+        // --------------------------------------------------
+        bool horizontal = true, first_iteration = true;
+        unsigned int amount = 10;
+        shaderBlur.use();
+        for (unsigned int i = 0; i < amount; i++)
+        {
+            glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
+            shaderBlur.setInt("horizontal", horizontal);
+            glBindTexture(GL_TEXTURE_2D, first_iteration ? colorBuffers[1] : pingpongColorbuffers[!horizontal]);  // bind texture of other framebuffer (or scene if first iteration)
+            // pingpongColorbuffers[!horizontal] // [1] ako je horizontal == false == 0 i [0] ako je horizontal == true == 1 ?
+            // Kako tacno blurujemeo ovde?
+            /* Moje misljenje: Tako sto, u zavisnosti od bool vrednosti horizontal promenljive,
+             * blurujemo ili horizontalne piksele ili vertikalne. Weights su tezine tj. koliko
+             * jako ce biti blurovani pikseli, svaki naredni (sto dalje od centra) ce biti blurovan
+             * sve manje i manje u blur.fs tako sto ce se mnoziti sa sve manjom tezinom */
+            renderQuad();
+            horizontal = !horizontal;
+            if (first_iteration)
+                first_iteration = false;
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+
+        // 3. Now we render floating point color buffer to a 2D quad and tonemap HDR colors to a default framebuffer
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Da li je ovo neohpodno ako smo to vec uradili pre pravljenja naseg framebuffera? Mozda za svaki slucaj.
+
         hdrShader.use();
+
         glActiveTexture(GL_TEXTURE0); // Aktiviramo teksturu (== scenu)
-        glBindTexture(GL_TEXTURE_2D, colorBuffer);
+        glBindTexture(GL_TEXTURE_2D, colorBuffers[0]);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[!horizontal]); // ? Zasto ne pingpongColorbuffers[1]?
+        hdrShader.setInt("bloom", bloom);
         hdrShader.setInt("hdr", hdr);
         hdrShader.setFloat("exposure", exposure);
         renderQuad(); // Iscrtamo pravougaonik (preko celog ekrana) na koji je nalepljena tekstura
 
-         std::cout << "hdr: " << (hdr ? "on" : "off") << "| exposure: " << exposure << std::endl;
-        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+        std::cout << "hdr: " << (hdr ? "on" : "off") << "| exposure: " << exposure << std::endl;
+        std::cout << "bloom: " << (bloom ? "on" : "off") << "| exposure: " << exposure << std::endl;
+         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -778,6 +858,17 @@ void processInput(GLFWwindow *window) {
       {
           hdrKeyPressed = false;
       }
+
+      if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS && !bloomKeyPressed)
+      {
+          bloom = !bloom;
+          bloomKeyPressed = true;
+      }
+      if (glfwGetKey(window, GLFW_KEY_V) == GLFW_RELEASE)
+      {
+          bloomKeyPressed = false;
+      }
+
 
       if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
       {
