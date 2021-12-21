@@ -32,13 +32,16 @@ unsigned int loadCubemap(vector<std::string> faces);
 
 void renderTerrain();
 
+void renderQuad();
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 bool blinn = false;
 bool blinnKeyPressed = false;
 bool freeCamKeyPressed = false;
-
+bool hdr = true;
+bool hdrKeyPressed = false;
+float exposure = 1.0f;
 // camera
 
 float lastX = SCR_WIDTH / 2.0f;
@@ -188,12 +191,9 @@ int main() {
     // -------------------------
     Shader entityShader("resources/shaders/entity_lighting.vs", "resources/shaders/entity_lighting.fs");
     Shader skyboxShader("resources/shaders/skybox.vs", "resources/shaders/skybox.fs");
-
     Shader instancedShader("resources/shaders/instanced.vs", "resources/shaders/instanced.fs");
-
-
     Shader terrainShader("resources/shaders/terrain.vs", "resources/shaders/terrain.fs");
-
+    Shader hdrShader("resources/shaders/hdr.vs", "resources/shaders/hdr.fs");
     // load models
     // -----------
     // Tree model
@@ -412,6 +412,34 @@ int main() {
         glBindVertexArray(0);
     }
 
+    // configure floating point framebuffer
+    // ------------------------------------
+    unsigned int hdrFBO;
+    glGenFramebuffers(1, &hdrFBO);
+    // create floating point color buffer
+    unsigned int colorBuffer;
+    glGenTextures(1, &colorBuffer);
+    glBindTexture(GL_TEXTURE_2D, colorBuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // create depth buffer (renderbuffer)
+    unsigned int rboDepth;
+    glGenRenderbuffers(1, &rboDepth);
+    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
+    // attach buffers
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "Framebuffer not complete!" << std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+
+    hdrShader.use();
+    hdrShader.setInt("hdrBuffer", 0);
 
     // render loop
     // -----------
@@ -426,11 +454,13 @@ int main() {
         // -----
         processInput(window);
 
-
-        // render
-        // ------
         glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // First we render the scene into the floating point framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Zasto opet glClear? // Jer sada clearujemo/postavljamo vrednosti za nas framebuffer a gore smo za default
 
         // don't forget to enable shader before setting uniforms
         entityShader.use();
@@ -471,24 +501,6 @@ int main() {
                                                 (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
         entityShader.setMat4("projection", projection);
         entityShader.setMat4("view", view);
-
-
-//        // Render loaded tree model
-//        glm::mat4 model = glm::mat4(1.0f);
-//        model = glm::translate(model,
-//                               programState->logPosition); // translate it down so it's at the center of the scene
-//        model = glm::scale(model, glm::vec3(1.0f));    // it's a bit too big for our scene, so scale it down
-//        entityShader.setMat4("model", model);
-//        treeModel.Draw(entityShader);
-
-//         //Render loaded grass model
-//        model = glm::mat4(1.0f);
-//        model = glm::translate(model,
-//                               glm::vec3(1.0f,1.0f,1.0f)); // translate it down so it's at the center of the scene
-//        model = glm::scale(model, glm::vec3(1.0f));    // it's a bit too big for our scene, so scale it down
-//        entityShader.setMat4("model", model);
-//        grassModel.Draw(entityShader);
-
 
         //Render loaded tent model
         glm::mat4 model = glm::mat4(1.0f);
@@ -688,7 +700,18 @@ int main() {
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
 
+        // Unbindujemo nas framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+
+        // Sada renderujemo teksturu (== scenu) iz naseg framebuffera preko obicnog ali nakon
+        // sto je provucemo kroz tone mapping algoritam iz hdrShader.fs
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Da li je ovo neohpodno ako smo to vec uradili pre pravljenja naseg framebuffera? Mozda za svaki slucaj.
+        hdrShader.use();
+        glActiveTexture(GL_TEXTURE0); // Aktiviramo teksturu (== scenu)
+        hdrShader.setInt("hdr", hdr);
+        hdrShader.setFloat("exposure", exposure);
+        renderQuad(); // Iscrtamo pravougaonik (preko celog ekrana) na koji je nalepljena tekstura
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -742,6 +765,30 @@ void processInput(GLFWwindow *window) {
     {
         blinnKeyPressed = false;
     }
+
+
+    // HDR and Exposure keybindings
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !hdrKeyPressed)
+      {
+          hdr = !hdr;
+          hdrKeyPressed = true;
+      }
+      if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE)
+      {
+          hdrKeyPressed = false;
+      }
+
+      if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+      {
+          if (exposure > 0.0f)
+              exposure -= 0.001f;
+          else
+              exposure = 0.0f;
+      }
+      else if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+      {
+          exposure += 0.001f;
+      }
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -1008,3 +1055,33 @@ void renderTerrain()
     glBindVertexArray(0);
 }
 
+
+
+unsigned int quadVAO = 0;
+unsigned int quadVBO;
+void renderQuad()
+{
+    if (quadVAO == 0)
+    {
+        float quadVertices[] = {
+            // positions        // texture Coords
+            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+             1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+             1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+        };
+        // setup plane VAO
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    }
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+}
