@@ -14,6 +14,11 @@
 
 /* Treba promeniti i instanced.fs verovatno, slicno kao entity.fs */
 
+
+/* Ovo gore je reseno */
+/* Pogledaj da li je lakse uopste ne stavljati bloom na skybox i ostale stvari tako sto ih necemo renderovati dok je bindovan nas framebuffer, jer je inace neophodno dodavanje istog/slicnog koda
+ * u fragment shadere sve */
+
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
