@@ -232,8 +232,15 @@ int main() {
     Model log2Model("resources/objects/log2/log2.obj");
     log2Model.SetShaderTextureNamePrefix("material.");
 
+    // Guitar Model
     Model guitarModel("resources/objects/guitar/gitara.obj");
     guitarModel.SetShaderTextureNamePrefix("material.");
+
+    // Monster Model
+    Model ratModel("resources/objects/rat/rat.obj");
+    ratModel.SetShaderTextureNamePrefix("material.");
+
+
 
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(0.0f, 0.1f, 1.0);
@@ -630,6 +637,14 @@ int main() {
         model = glm::scale(model, glm::vec3(programState->guitarScale));
         entityShader.setMat4("model", model);
         guitarModel.Draw(entityShader);
+
+
+        // Render rat in progress
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(5.0f, 0.0f, 1.0f));
+        model = glm::scale(model, glm::vec3(0.01f));
+        entityShader.setMat4("model", model);
+        ratModel.Draw(entityShader);
 
         //Loading terrain
         terrainShader.use();
