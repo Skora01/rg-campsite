@@ -1,24 +1,3 @@
-
-// entity shader == shader // Proveri da li ce morati to sto se doda u entity da se dodaje i u instanced, vrv hoce
-
-// ShaderLight je vrv nepotreban jer on generise ona svetla kod njega u primeru
-
-// hdrShader == shaderBloomFinal
-
-/* Proveri ovo iznad, takodje izgleda da postoje konflikti izmedju bloom-a i hdr-a i
- * njihovih bool promenljivih jer dolazi do problema ako se oba odjednom upale izgleda
- * BLOOM NE RADI NISTA BEZ HDR-A
- */
-
-/* Cudni artefakti kada bloom radi i previse je blurovano sve umesto da bude samo vatra */
-
-/* Treba promeniti i instanced.fs verovatno, slicno kao entity.fs */
-
-
-/* Ovo gore je reseno */
-/* Pogledaj da li je lakse uopste ne stavljati bloom na skybox i ostale stvari tako sto ih necemo renderovati dok je bindovan nas framebuffer, jer je inace neophodno dodavanje istog/slicnog koda
- * u fragment shadere sve */
-
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -54,8 +33,11 @@ unsigned int loadCubemap(vector<std::string> faces);
 void renderTerrain();
 
 void renderQuad();
+
+bool checkOverlapping(float targetX, float targetY, glm::vec3 center);
+
 // settings
-const unsigned int SCR_WIDTH = 1920; /* Ovo mnogo utice na kvalitet slike sada sa HDR jer se pravi tekstura sa ovom rezolucijom valjda. Takodje mora window manager u floating modu da radi*/
+const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
 bool blinn = false;
 bool blinnKeyPressed = false;
@@ -339,7 +321,9 @@ int main() {
 
 
     // Instancing //
-
+    glm::vec3 tentCenter = programState->tentPosition;
+    glm::vec3 tent2Center = programState->tent2Position;
+       // Trees
     unsigned int amount = 100;
     glm::mat4 *modelMatrices;
     modelMatrices = new glm::mat4[amount];
@@ -355,8 +339,12 @@ int main() {
         float x = sin(angle) * radius + displacement;
         displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
         float z = cos(angle) * radius + displacement;
+//        if(checkOverlapping(x, z, tentCenter) || checkOverlapping(x, z, tent2Center) || checkOverlapping(x, z, glm::vec3(0.0f, 0.0f, 0.0f)))
+//        {
+//            x = 100.0f;
+//            z = 100.0f;
+//        }
         model = glm::translate(model, glm::vec3(x, 0.0f, z));
-
         modelMatrices[i] = model;
     }
 
@@ -390,6 +378,7 @@ int main() {
         glBindVertexArray(0);
     }
 
+        // Grass
     amount = 500;
     radius = 10.0f;
     offset = 15.0f;
@@ -404,7 +393,14 @@ int main() {
         float x = sin(angle) * radius + displacement;
         displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
         float z = cos(angle) * radius + displacement;
+
+        if(checkOverlapping(x, z, tentCenter) || checkOverlapping(x, z, tent2Center) || checkOverlapping(x, z, glm::vec3(0.0f, 0.0f, 0.0f)))
+        {
+            x = 100.0f;
+            z = 100.0f;
+        }
         model = glm::translate(model, glm::vec3(x, 0.0f, z));
+        model = glm::scale(model, glm::vec3(0.7f, 0.7f, 0.7f));
 
         modelMatrices[i] = model;
     }
@@ -413,7 +409,6 @@ int main() {
     glGenBuffers(1, &buffer2);
     glBindBuffer(GL_ARRAY_BUFFER, buffer2);
     glBufferData(GL_ARRAY_BUFFER, amount * sizeof(glm::mat4), &modelMatrices[0], GL_STATIC_DRAW);
-
 
     for(unsigned int i = 0; i < grassModel.meshes.size(); i++)
     {
@@ -444,10 +439,8 @@ int main() {
     // ------------------------------------
     unsigned int hdrFBO;
     glGenFramebuffers(1, &hdrFBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO); // Nije bilo potrebno kod hdr-a
-    // create floating point color buffer
-    // unsigned int colorBuffer; - HDR
-    // glGenTextures(1, &colorBuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+
     unsigned int colorBuffers[2]; // FragColor i BrightColor
     glGenTextures(2, colorBuffers);
     for(unsigned int i = 0; i < 2; i++)
@@ -467,13 +460,9 @@ int main() {
     glGenRenderbuffers(1, &rboDepth);
     glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
-    // attach buffers - HDR
-//    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
-//    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
 
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
 
-    // tell OpenGL which color attachments we'll use (of this framebuffer) for rendering
     unsigned int attachments[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
     glDrawBuffers(2, attachments);
 
@@ -494,15 +483,15 @@ int main() {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // we clamp to the edge as the blur filter would otherwise sample repeated texture values!
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongColorbuffers[i], 0);
-        // also check if framebuffers are complete (no need for depth buffer)
+
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
             std::cout << "Framebuffer not complete!" << std::endl;
     }
 
-    // Nismo unbindovali nas framebuffer !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // Nismo unbindovali nas framebuffer !!
 
     shaderBlur.use();
     shaderBlur.setInt("image", 0);
@@ -557,8 +546,8 @@ int main() {
         entityShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
         entityShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
         entityShader.setFloat("spotLight.constant", 1.0f);
-        entityShader.setFloat("spotLight.linear", 0.09);
-        entityShader.setFloat("spotLight.quadratic", 0.032);
+        entityShader.setFloat("spotLight.linear", 0.09f);
+        entityShader.setFloat("spotLight.quadratic", 0.032f);
         entityShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
         entityShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
         entityShader.setVec3("viewPos", programState->camera.Position);
@@ -1202,3 +1191,21 @@ void renderQuad()
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
 }
+
+
+bool checkOverlapping(float targetX, float targetZ, glm::vec3 center)
+{
+    float offset;
+    if(center.x == 0 && center.z == 0)
+    {
+        offset = 4;
+    }
+    else offset = 7.5;
+
+    if((targetX >= center.x - offset && targetX <= center.x + offset && targetZ >= center.z - offset && targetZ <= center.z + offset))
+    {
+        return true;
+    }
+    else return false;
+}
+
