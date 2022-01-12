@@ -96,6 +96,12 @@ struct ProgramState {
     glm::vec3 log2Position = glm::vec3(0.0f,0.0f,5.0f);
     float log2Rotation = 250.0f;
     float log2Scale = 0.250f;
+
+    glm::vec3 guitarPosition = glm::vec3(4.0f, 0.0f, -1.0f);
+    float guitarRotationY = 272.0f;
+    float guitarRotationX = 354.0f;
+    float guitarScale = 0.250;
+
     PointLight pointLight;
     DirLight dirLight;
     ProgramState()
@@ -226,6 +232,9 @@ int main() {
     Model log2Model("resources/objects/log2/log2.obj");
     log2Model.SetShaderTextureNamePrefix("material.");
 
+    Model guitarModel("resources/objects/guitar/gitara.obj");
+    guitarModel.SetShaderTextureNamePrefix("material.");
+
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(0.0f, 0.1f, 1.0);
     pointLight.ambient = glm::vec3(0.1, 0.1, 0.1);
@@ -339,11 +348,11 @@ int main() {
         float x = sin(angle) * radius + displacement;
         displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
         float z = cos(angle) * radius + displacement;
-//        if(checkOverlapping(x, z, tentCenter) || checkOverlapping(x, z, tent2Center) || checkOverlapping(x, z, glm::vec3(0.0f, 0.0f, 0.0f)))
-//        {
-//            x = 100.0f;
-//            z = 100.0f;
-//        }
+        if(checkOverlapping(x, z, tentCenter) || checkOverlapping(x, z, tent2Center) || checkOverlapping(x, z, glm::vec3(0.0f, 0.0f, 0.0f)))
+        {
+            x = 100.0f;
+            z = 100.0f;
+        }
         model = glm::translate(model, glm::vec3(x, 0.0f, z));
         modelMatrices[i] = model;
     }
@@ -580,9 +589,7 @@ int main() {
 
         //Render loaded campfire model
         model = glm::mat4(1.0f);
-        model = glm::translate(model,
-                               pointLight.position);
-//        entityShader.setVec3("lightColor", glm::vec3(10.0f, 0.0f, 0.0f));//lightColor need to be adjusted
+        model = glm::translate(model, pointLight.position);
         entityShader.setVec3("lightColor", glm::vec3(150.0f,88.0f,34.0f));
         entityShader.setMat4("model", model);
         campfireModel.Draw(entityShader);
@@ -614,6 +621,15 @@ int main() {
         entityShader.setMat4("model", model);
         log2Model.Draw(entityShader);
 
+
+        // Render guitar
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, programState->guitarPosition);
+        model = glm::rotate(model, glm::radians(programState->guitarRotationY), glm::vec3(0,1,0));
+        model = glm::rotate(model, glm::radians(programState->guitarRotationX), glm::vec3(1, 0, 0));
+        model = glm::scale(model, glm::vec3(programState->guitarScale));
+        entityShader.setMat4("model", model);
+        guitarModel.Draw(entityShader);
 
         //Loading terrain
         terrainShader.use();
@@ -971,6 +987,11 @@ void DrawImGui(ProgramState *programState) {
         ImGui::DragFloat3("Log2 position", (float*)&programState->log2Position);
         ImGui::DragFloat("Log2 rotation", &programState->log2Rotation, 1.0, 0, 360);
         ImGui::DragFloat("Log2 scale", &programState->log2Scale, 0.05, 0.1, 4.0);
+        ImGui::Text("Guitar");
+        ImGui::DragFloat3("Guitar position", (float*)&programState->guitarPosition);
+        ImGui::DragFloat("Guitar rotation Y", &programState->guitarRotationY, 1.0, 0, 360);
+        ImGui::DragFloat("Guitar rotation X", &programState->guitarRotationX, 1.0, 0, 360);
+        ImGui::DragFloat("Guitar scale", &programState->guitarScale, 0.05, 0.1, 4.0);
         ImGui::End();
     }
 
