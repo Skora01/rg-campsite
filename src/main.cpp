@@ -197,7 +197,7 @@ int main() {
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
-    //glEnable(GL_CULL_FACE); // Neophodno promeniti redosled za teren da ne bi bio odstranjen
+//    glEnable(GL_CULL_FACE); // Neophodno promeniti redosled za teren da ne bi bio odstranjen
 
     // build and compile shaders
     // -------------------------
@@ -339,13 +339,17 @@ int main() {
     // Instancing //
     glm::vec3 tentCenter = programState->tentPosition;
     glm::vec3 tent2Center = programState->tent2Position;
-       // Trees
-    unsigned int amount = 100;
+
+    // Trees
     glm::mat4 *modelMatrices;
+
+    unsigned int amount = 100;
+    float radius = 50.0f; // r = 50.0f i o = 10.0f je okej sa amount = 100 // amount = 100, radius = 45.0f, offset = 100.0f
+    float offset = 10.0f;
+
     modelMatrices = new glm::mat4[amount];
     srand(glfwGetTime()); // initialize random seed
-    float radius = 50.0f; // r = 50.0f i o = 10.0f je okej sa amount = 100 // amount = 100, radius = 45.0f, offset = 100.0f
-    float offset = 20.0f;
+
     for(unsigned int i = 0; i < amount; i++)
     {
         glm::mat4 model = glm::mat4(1.0f);
@@ -357,8 +361,8 @@ int main() {
         float z = cos(angle) * radius + displacement;
         if(checkOverlapping(x, z, tentCenter) || checkOverlapping(x, z, tent2Center) || checkOverlapping(x, z, glm::vec3(0.0f, 0.0f, 0.0f)))
         {
-            x = 100.0f;
-            z = 100.0f;
+            x = 10.0f;
+            z = 10.0f;
         }
         model = glm::translate(model, glm::vec3(x, 0.0f, z));
         modelMatrices[i] = model;
@@ -394,7 +398,7 @@ int main() {
         glBindVertexArray(0);
     }
 
-        // Grass
+    // Grass
     amount = 500;
     radius = 10.0f;
     offset = 15.0f;
@@ -509,6 +513,7 @@ int main() {
 
     // Nismo unbindovali nas framebuffer !!
 
+
     shaderBlur.use();
     shaderBlur.setInt("image", 0);
 
@@ -535,6 +540,15 @@ int main() {
         glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Zasto opet glClear? // Jer sada clearujemo/postavljamo vrednosti za nas framebuffer a gore smo za default
+
+
+
+
+        glEnable(GL_CULL_FACE);
+
+
+
+
 
         // don't forget to enable shader before setting uniforms
         entityShader.use();
@@ -585,6 +599,8 @@ int main() {
         entityShader.setMat4("model", model);
         tentModel.Draw(entityShader);
 
+        glDisable(GL_CULL_FACE);
+
         //Render loaded second tent model
         model = glm::mat4(1.0f);
         model = glm::translate(model,
@@ -593,6 +609,9 @@ int main() {
         model = glm::scale(model, glm::vec3(programState->tent2Scale));
         entityShader.setMat4("model", model);
         tent2Model.Draw(entityShader);
+
+
+        glEnable(GL_CULL_FACE);
 
         //Render loaded campfire model
         model = glm::mat4(1.0f);
@@ -695,6 +714,13 @@ int main() {
         renderTerrain();
 
 
+        glDisable(GL_CULL_FACE);
+
+
+
+
+
+
         // Render instanced trees
         instancedShader.use();
 
@@ -727,11 +753,11 @@ int main() {
         instancedShader.setFloat("material.shininess", 32.0f);
         instancedShader.setMat4("projection", projection);
         instancedShader.setMat4("view", view);
-        instancedShader.setInt("texture_diffuse1", 0); // Neophodno jer nema .Draw nego glDrawElements
-
+        instancedShader.setInt("texture_diffuse", 0); // Neophodno jer nema .Draw nego glDrawElements
+        instancedShader.setInt("texture_normal",1);
+        instancedShader.setInt("texture_specular", 2);
         instancedShader.setVec3("lightColor", glm::vec3(150.0f,88.0f,34.0f));
 
-        glActiveTexture(GL_TEXTURE0); // Neophodno jer nema .Draw nego glDrawElements
         /*
             Ako pretpostavimo da je model zapravo skup od 4 drveta, taj skup sadrzi 4 debla i 4 grane npr.
             i to bi onda bilo treeModel.meshes.size() = 8.
@@ -742,10 +768,24 @@ int main() {
          */
         for(unsigned int i = 0; i < treeModel.meshes.size(); i++)
         {
-            if(i % 2 == 0)
+            glActiveTexture(GL_TEXTURE0);
+            if(i % 2 == 0) {
                 glBindTexture(GL_TEXTURE_2D, treeModel.textures_loaded[0].id); // Stavlja aktiviranu teksturu
-             else
+                glDisable(GL_CULL_FACE); // We don't want face culling when the branches are drawn
+            }
+             else {
                 glBindTexture(GL_TEXTURE_2D, treeModel.textures_loaded[2].id);
+                glEnable(GL_CULL_FACE);
+            }
+            glActiveTexture(GL_TEXTURE1);
+            if(i % 2 == 0) {
+                glBindTexture(GL_TEXTURE_2D, treeModel.textures_loaded[1].id);
+            }
+            else {
+                glBindTexture(GL_TEXTURE_2D, treeModel.textures_loaded[4].id);
+            }
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, treeModel.textures_loaded[3].id);
             glBindVertexArray(treeModel.meshes[i].VAO); // Binduje model sa aktivnom teksturom
 
             glDrawElementsInstanced(
@@ -755,17 +795,19 @@ int main() {
 
         }
 
+        glDisable(GL_CULL_FACE);
         for(unsigned int i = 0; i < grassModel.meshes.size(); i++)
         {
+             glActiveTexture(GL_TEXTURE0);
+             glBindTexture(GL_TEXTURE_2D, grassModel.textures_loaded[0].id);
+             glActiveTexture(GL_TEXTURE1);
+             glBindTexture(GL_TEXTURE_2D, grassModel.textures_loaded[1].id);
+             glBindVertexArray(grassModel.meshes[i].VAO);
 
-            glBindTexture(GL_TEXTURE_2D, grassModel.textures_loaded[0].id);
-
-            glBindVertexArray(grassModel.meshes[i].VAO);
-
-            glDrawElementsInstanced(
-                        GL_TRIANGLES, grassModel.meshes[i].indices.size(), GL_UNSIGNED_INT, 0, amount
-            );
-            glBindVertexArray(0);
+             glDrawElementsInstanced(
+                         GL_TRIANGLES, grassModel.meshes[i].indices.size(), GL_UNSIGNED_INT, 0, amount
+             );
+             glBindVertexArray(0);
 
         }
 
@@ -791,6 +833,7 @@ int main() {
 
         // 2. We blur bright fragments with two-pass Gaussian Blur
         // --------------------------------------------------
+        glActiveTexture(GL_TEXTURE0);
         bool horizontal = true, first_iteration = true;
         unsigned int amountBlur = 10;
         shaderBlur.use();
@@ -800,7 +843,7 @@ int main() {
             shaderBlur.setInt("horizontal", horizontal);
             glBindTexture(GL_TEXTURE_2D, first_iteration ? colorBuffers[1] : pingpongColorbuffers[!horizontal]);  // bind texture of other framebuffer (or scene if first iteration)
             // pingpongColorbuffers[!horizontal] // [1] ako je horizontal == false == 0 i [0] ako je horizontal == true == 1 ?
-            // Kako tacno blurujemeo ovde?
+            // Kako tacno blurujemo ovde?
             /* Moje misljenje: Tako sto, u zavisnosti od bool vrednosti horizontal promenljive,
              * blurujemo ili horizontalne piksele ili vertikalne. Weights su tezine tj. koliko
              * jako ce biti blurovani pikseli, svaki naredni (sto dalje od centra) ce biti blurovan
@@ -827,6 +870,10 @@ int main() {
         hdrShader.setInt("hdr", hdr);
         hdrShader.setFloat("exposure", exposure);
         renderQuad(); // Iscrtamo pravougaonik (preko celog ekrana) na koji je nalepljena tekstura
+
+
+
+
 
         std::cout << "hdr: " << (hdr ? "on" : "off") << "| exposure: " << exposure << std::endl;
         std::cout << "bloom: " << (bloom ? "on" : "off") << "| exposure: " << exposure << std::endl;

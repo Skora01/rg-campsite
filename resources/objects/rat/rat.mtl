@@ -13,4 +13,4 @@ illum 2
 
 map_Kd Merged_Extract4x_diffusex.jpg
 map_Ks Merged_Extract4x_speculax.jpg
-map_Bup Merged_Extract4x_normal.jpg
+map_Bump Merged_Extract4x_normal.jpg
