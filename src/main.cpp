@@ -34,12 +34,12 @@ void renderTerrain();
 
 void renderQuad();
 
-bool checkOverlapping(float targetX, float targetY, glm::vec3 center);
+bool checkOverlapping(float targetX, float targetY, glm::vec3 center, float overlappingOffset);
 
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
-bool blinn = false;
+bool blinn = true;
 bool blinnKeyPressed = false;
 bool freeCamKeyPressed = false;
 float heightScale = 0.1;
@@ -101,6 +101,22 @@ struct ProgramState {
     float guitarRotationY = 272.0f;
     float guitarRotationX = 354.0f;
     float guitarScale = 0.250;
+
+    glm::vec3 ratPosition = glm::vec3(5.0f, 0.0f, 5.0f); // TODO
+    float ratScale = 0.01f;
+
+    glm::vec3 boulder2Position = glm::vec3(-5.0f, 12.0f, 18.0f);
+    float boulder2RotationX = 1.0f;
+    float boulder2RotationY = 1.0f;
+    float boulder2RotationZ = 197.0f;
+    float boulder2Scale = 2.3f;
+
+    glm::vec3 axePosition = glm::vec3(-1.0f, 1.6f, 5.0f);
+    float axeRotationX = 0.0f;
+    float axeRotationY = 202.0f;
+    float axeRotationZ = 123.0f;
+    float axeScale = 2.05f;
+
 
     PointLight pointLight;
     DirLight dirLight;
@@ -197,7 +213,6 @@ int main() {
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
-//    glEnable(GL_CULL_FACE); // Neophodno promeniti redosled za teren da ne bi bio odstranjen
 
     // build and compile shaders
     // -------------------------
@@ -240,13 +255,20 @@ int main() {
     Model ratModel("resources/objects/rat/rat.obj");
     ratModel.SetShaderTextureNamePrefix("material.");
 
+    // Boulder Model
+    Model boulder2Model("resources/objects/boulder2/model.obj");
+    boulder2Model.SetShaderTextureNamePrefix("material.");
+
+    // Axe Model
+    Model axeModel("resources/objects/axe/axe.obj");
+    axeModel.SetShaderTextureNamePrefix("material.");
 
 
     PointLight& pointLight = programState->pointLight;
-    pointLight.position = glm::vec3(0.0f, 0.1f, 1.0);
-    pointLight.ambient = glm::vec3(0.1, 0.1, 0.1);
-    pointLight.diffuse = glm::vec3(0.6, 0.6, 0.6);
-    pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
+    pointLight.position = glm::vec3(0.0f, 0.1f, 0.0f);
+    pointLight.ambient = glm::vec3(0.1f, 0.1f, 0.1f);
+    pointLight.diffuse = glm::vec3(0.6f, 0.6f, 0.6f);
+    pointLight.specular = glm::vec3(1.0f, 1.0f, 1.0f);
 
     pointLight.constant = 1.0f;
     pointLight.linear = 0.09f;
@@ -339,16 +361,16 @@ int main() {
     // Instancing //
     glm::vec3 tentCenter = programState->tentPosition;
     glm::vec3 tent2Center = programState->tent2Position;
-
     // Trees
     glm::mat4 *modelMatrices;
 
     unsigned int amount = 100;
     float radius = 50.0f; // r = 50.0f i o = 10.0f je okej sa amount = 100 // amount = 100, radius = 45.0f, offset = 100.0f
     float offset = 10.0f;
-
+    float overlappingOffset = 30.0f; // Overlapping offset must be higher than the one for grass because trees are much bigger in size
     modelMatrices = new glm::mat4[amount];
     srand(glfwGetTime()); // initialize random seed
+    // Offset must be higher for trees because of their size
 
     for(unsigned int i = 0; i < amount; i++)
     {
@@ -359,10 +381,11 @@ int main() {
         float x = sin(angle) * radius + displacement;
         displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
         float z = cos(angle) * radius + displacement;
-        if(checkOverlapping(x, z, tentCenter) || checkOverlapping(x, z, tent2Center) || checkOverlapping(x, z, glm::vec3(0.0f, 0.0f, 0.0f)))
+
+        if(checkOverlapping(x, z, tentCenter, overlappingOffset) || checkOverlapping(x, z, tent2Center, overlappingOffset) || checkOverlapping(x, z, glm::vec3(0.0f), overlappingOffset))
         {
-            x = 10.0f;
-            z = 10.0f;
+            x = 100.0f;
+            z = 100.0f;
         }
         model = glm::translate(model, glm::vec3(x, 0.0f, z));
         modelMatrices[i] = model;
@@ -402,6 +425,7 @@ int main() {
     amount = 500;
     radius = 10.0f;
     offset = 15.0f;
+    overlappingOffset = 7.7f;
     modelMatrices = new glm::mat4[amount];
     srand(glfwGetTime()); // initialize random seed
     for(unsigned int i = 0; i < amount; i++)
@@ -414,7 +438,7 @@ int main() {
         displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
         float z = cos(angle) * radius + displacement;
 
-        if(checkOverlapping(x, z, tentCenter) || checkOverlapping(x, z, tent2Center) || checkOverlapping(x, z, glm::vec3(0.0f, 0.0f, 0.0f)))
+        if(checkOverlapping(x, z, tentCenter, overlappingOffset) || checkOverlapping(x, z, tent2Center, overlappingOffset) || checkOverlapping(x, z, glm::vec3(0.0f), overlappingOffset))
         {
             x = 100.0f;
             z = 100.0f;
@@ -541,27 +565,19 @@ int main() {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Zasto opet glClear? // Jer sada clearujemo/postavljamo vrednosti za nas framebuffer a gore smo za default
 
-
-
-
-        glEnable(GL_CULL_FACE);
-
-
-
-
+        glEnable(GL_CULL_FACE); // Enable face culling
 
         // don't forget to enable shader before setting uniforms
         entityShader.use();
-        //directional light
 
+        // Directional light
         entityShader.setVec3("dirLight.direction", dirLight.direction);
         // entityShader.setVec3("dirLight.direction", -1.0f, -0.2f, -0.3f);
         entityShader.setVec3("dirLight.ambient", dirLight.ambient);
         entityShader.setVec3("dirLight.diffuse", dirLight.diffuse);
         entityShader.setVec3("dirLight.specular", dirLight.specular);
-        // point light norm = normalize(norm);
-        //point light
 
+        // Point light
         entityShader.setVec3("pointLight.position", pointLight.position);
         entityShader.setVec3("pointLight.ambient", pointLight.ambient);
         entityShader.setVec3("pointLight.diffuse", pointLight.diffuse);
@@ -569,7 +585,7 @@ int main() {
         entityShader.setFloat("pointLight.constant", pointLight.constant);
         entityShader.setFloat("pointLight.linear", pointLight.linear);
         entityShader.setFloat("pointLight.quadratic", pointLight.quadratic);
-        //spotlight (turn on if u want flashlight)
+        // Spotlight (turn on if u want flashlight)
         entityShader.setVec3("spotLight.position", programState->camera.Position);
         entityShader.setVec3("spotLight.direction", programState->camera.Front);
         entityShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
@@ -590,7 +606,7 @@ int main() {
         entityShader.setMat4("projection", projection);
         entityShader.setMat4("view", view);
 
-        //Render loaded tent model
+        // Render loaded tent model
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model,
                                programState->tentPosition);
@@ -613,14 +629,14 @@ int main() {
 
         glEnable(GL_CULL_FACE);
 
-        //Render loaded campfire model
+        // Render loaded campfire model
         model = glm::mat4(1.0f);
         model = glm::translate(model, pointLight.position);
         entityShader.setVec3("lightColor", glm::vec3(150.0f,88.0f,34.0f));
         entityShader.setMat4("model", model);
         campfireModel.Draw(entityShader);
 
-        //Render loaded log model
+        // Render loaded log model
         model = glm::mat4(1.0f);
         model = glm::translate(model,
                                programState->logPosition);
@@ -629,7 +645,7 @@ int main() {
         entityShader.setMat4("model", model);
         logModel.Draw(entityShader);
 
-        //Render second log of same model
+        // Render second log of same model
         model = glm::mat4(1.0f);
         model = glm::translate(model,
                                programState->secondLogPosition);
@@ -638,7 +654,7 @@ int main() {
         entityShader.setMat4("model", model);
         logModel.Draw(entityShader);
 
-        //Render loaded log 2 model
+        // Render loaded log 2 model
         model = glm::mat4(1.0f);
         model = glm::translate(model,
                                programState->log2Position);
@@ -648,7 +664,7 @@ int main() {
         log2Model.Draw(entityShader);
 
 
-        // Render guitar
+        // Render guitar model
         model = glm::mat4(1.0f);
         model = glm::translate(model, programState->guitarPosition);
         model = glm::rotate(model, glm::radians(programState->guitarRotationY), glm::vec3(0,1,0));
@@ -658,12 +674,34 @@ int main() {
         guitarModel.Draw(entityShader);
 
 
-        // Render rat in progress
+        // Render rat model
         model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(5.0f, 0.0f, 1.0f));
-        model = glm::scale(model, glm::vec3(0.01f));
+        model = glm::translate(model, programState->ratPosition);
+        model = glm::scale(model, glm::vec3(programState->ratScale));
         entityShader.setMat4("model", model);
         ratModel.Draw(entityShader);
+
+        // Render boulder model
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, programState->boulder2Position);
+        model = glm::rotate(model, glm::radians(programState->boulder2RotationX), glm::vec3(1, 0, 0));
+        model = glm::rotate(model, glm::radians(programState->boulder2RotationY), glm::vec3(0, 1, 0));
+        model = glm::rotate(model, glm::radians(programState->boulder2RotationZ), glm::vec3(0, 0, 1));
+
+        model = glm::scale(model, glm::vec3(programState->boulder2Scale));
+        entityShader.setMat4("model", model);
+        boulder2Model.Draw(entityShader);
+
+
+        // Render axe model
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, programState->axePosition);
+        model = glm::rotate(model, glm::radians(programState->axeRotationX), glm::vec3(1, 0, 0));
+        model = glm::rotate(model, glm::radians(programState->axeRotationY), glm::vec3(0, 1, 0));
+        model = glm::rotate(model, glm::radians(programState->axeRotationZ), glm::vec3(0, 0, 1));
+        model = glm::scale(model, glm::vec3(programState->axeScale));
+        entityShader.setMat4("model", model);
+        axeModel.Draw(entityShader);
 
         //Loading terrain
         terrainShader.use();
@@ -684,7 +722,8 @@ int main() {
         terrainShader.setFloat("pointLight.constant", pointLight.constant);
         terrainShader.setFloat("pointLight.linear", pointLight.linear);
         terrainShader.setFloat("pointLight.quadratic", pointLight.quadratic);
-        //spotlight (turn on if u want flashlight)
+
+        // Spotlight (turn on if u want flashlight)
         terrainShader.setVec3("spotLight.position", programState->camera.Position);
         terrainShader.setVec3("spotLight.direction", programState->camera.Front);
         terrainShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
@@ -798,16 +837,17 @@ int main() {
         glDisable(GL_CULL_FACE);
         for(unsigned int i = 0; i < grassModel.meshes.size(); i++)
         {
-             glActiveTexture(GL_TEXTURE0);
-             glBindTexture(GL_TEXTURE_2D, grassModel.textures_loaded[0].id);
-             glActiveTexture(GL_TEXTURE1);
-             glBindTexture(GL_TEXTURE_2D, grassModel.textures_loaded[1].id);
-             glBindVertexArray(grassModel.meshes[i].VAO);
 
-             glDrawElementsInstanced(
-                         GL_TRIANGLES, grassModel.meshes[i].indices.size(), GL_UNSIGNED_INT, 0, amount
-             );
-             glBindVertexArray(0);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, grassModel.textures_loaded[0].id);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, grassModel.textures_loaded[1].id);
+            glBindVertexArray(grassModel.meshes[i].VAO);
+
+            glDrawElementsInstanced(
+                        GL_TRIANGLES, grassModel.meshes[i].indices.size(), GL_UNSIGNED_INT, 0, amount
+            );
+            glBindVertexArray(0);
 
         }
 
@@ -1017,43 +1057,76 @@ void DrawImGui(ProgramState *programState) {
     {
         static float f = 0.0f;
         ImGui::Begin("Hello window");
+
         ImGui::Text("Hello text");
         ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
+
         ImGui::Text("PointLight:");
+        ImGui::DragFloat3("pointLight.position", (float*)&programState->pointLight.position);
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 3.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 3.0);
         ImGui::DragFloat("pointLight.quadratic", &programState->pointLight.quadratic, 0.05, 0.0, 3.0);
+
         ImGui::Text("DirLight:");
         ImGui::DragFloat3("dirLight.direction", (float*)&programState->dirLight.direction);
         ImGui::DragFloat3("dirLight.ambient",  (float*)  &programState->dirLight.ambient);
         ImGui::DragFloat3("dirLight.diffuse", (float*) &programState->dirLight.diffuse);
         ImGui::DragFloat3("dirLight.specular",(float*) &programState->dirLight.specular);
+
         ImGui::Text("Tent:");
         ImGui::DragFloat3("Tent position", (float*)&programState->tentPosition);
         ImGui::DragFloat("Tent rotation", &programState->tentRotation, 1.0, 0, 360);
         ImGui::DragFloat("Tent scale", &programState->tentScale, 1.0, 400.0, 500.0);
+
         ImGui::Text("Tent2:");
         ImGui::DragFloat3("Tent2 position", (float*)&programState->tent2Position);
         ImGui::DragFloat("Tent2 rotation", &programState->tent2Rotation, 1.0, 0, 360);
         ImGui::DragFloat("Tent2 scale", &programState->tent2Scale, 1.0, 400.0, 500.0);
+
         ImGui::Text("Log");
         ImGui::DragFloat3("Log position", (float*)&programState->logPosition);
         ImGui::DragFloat("Log rotation", &programState->logRotation, 1.0, 0, 360);
         ImGui::DragFloat("Log scale", &programState->logScale, 0.05, 0.1, 4.0);
-        ImGui::Text("Second log");
+
+        ImGui::Text("Second log:");
         ImGui::DragFloat3("Second position", (float*)&programState->secondLogPosition);
         ImGui::DragFloat("Second rotation", &programState->secondLogRotation, 1.0, 0, 360);
         ImGui::DragFloat("Second scale", &programState->secondLogScale, 0.05, 0.1, 4.0);
-        ImGui::Text("Log2");
+
+        ImGui::Text("Log2:");
         ImGui::DragFloat3("Log2 position", (float*)&programState->log2Position);
         ImGui::DragFloat("Log2 rotation", &programState->log2Rotation, 1.0, 0, 360);
         ImGui::DragFloat("Log2 scale", &programState->log2Scale, 0.05, 0.1, 4.0);
-        ImGui::Text("Guitar");
+
+        ImGui::Text("Guitar:");
         ImGui::DragFloat3("Guitar position", (float*)&programState->guitarPosition);
         ImGui::DragFloat("Guitar rotation Y", &programState->guitarRotationY, 1.0, 0, 360);
         ImGui::DragFloat("Guitar rotation X", &programState->guitarRotationX, 1.0, 0, 360);
         ImGui::DragFloat("Guitar scale", &programState->guitarScale, 0.05, 0.1, 4.0);
+
+        ImGui::Text("Rat:");
+        ImGui::DragFloat3("Rat position", (float*)&programState->ratPosition);
+        ImGui::DragFloat("Rat scale", &programState->ratScale, 0.001, 0.01, 1.0);
+
+        ImGui::Text("Axe:");
+        ImGui::DragFloat3("Axe position", (float*)&programState->axePosition);
+        ImGui::DragFloat("Axe rotation X", &programState->axeRotationX, 1.0, 0, 360);
+        ImGui::DragFloat("Axe rotation Y", &programState->axeRotationY, 1.0, 0, 360);
+        ImGui::DragFloat("Axe rotation Z", &programState->axeRotationZ, 1.0, 0, 360);
+        ImGui::DragFloat("Axe scale", &programState->axeScale, 0.05, 0.1, 4.0);
+
+
+
+        ImGui::Text("Boulder2:");
+        ImGui::DragFloat3("Boulder position", (float*)&programState->boulder2Position);
+        ImGui::DragFloat("Boulder rotation X", &programState->boulder2RotationX, 1.0, 0, 360);
+        ImGui::DragFloat("Boulder rotation Y", &programState->boulder2RotationY, 1.0, 0, 360);
+        ImGui::DragFloat("Boulder rotation Z", &programState->boulder2RotationZ, 1.0, 0, 360);
+        ImGui::DragFloat("Boulder scale", &programState->boulder2Scale, 0.05, 0.1, 4.0);
+
+
+
         ImGui::End();
     }
 
@@ -1276,16 +1349,16 @@ void renderQuad()
 }
 
 
-bool checkOverlapping(float targetX, float targetZ, glm::vec3 center)
+bool checkOverlapping(float targetX, float targetZ, glm::vec3 center, float overlappingOffset)
 {
-    float offset;
+
+    // Offset around the campfire should be smaller
     if(center.x == 0 && center.z == 0)
     {
-        offset = 4;
+        overlappingOffset= 4;
     }
-    else offset = 7.5;
 
-    if((targetX >= center.x - offset && targetX <= center.x + offset && targetZ >= center.z - offset && targetZ <= center.z + offset))
+    if((targetX >= center.x - overlappingOffset && targetX <= center.x + overlappingOffset && targetZ >= center.z - overlappingOffset && targetZ <= center.z + overlappingOffset))
     {
         return true;
     }
