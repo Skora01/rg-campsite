@@ -23,7 +23,7 @@ void main()
     Normal = aNormal;
     TexCoords = aTexCoords;
 
-    mat3 normalMatrix = transpose(inverse(mat3(model)));
+    mat3 normalMatrix = transpose(inverse(mat3(model))); //model * view try
     vec3 T = normalize(normalMatrix * aTangent);
     vec3 N = normalize(normalMatrix * aNormal);
     T = normalize(T - dot(T, N) * N);
@@ -36,3 +36,4 @@ void main()
 
     gl_Position = projection * view * vec4(FragPos, 1.0);
 }
+

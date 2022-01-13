@@ -55,8 +55,8 @@ void renderTerrain();
 
 void renderQuad();
 // settings
-const unsigned int SCR_WIDTH = 1920; /* Ovo mnogo utice na kvalitet slike sada sa HDR jer se pravi tekstura sa ovom rezolucijom valjda. Takodje mora window manager u floating modu da radi*/
-const unsigned int SCR_HEIGHT = 1080;
+const unsigned int SCR_WIDTH = 800; /* Ovo mnogo utice na kvalitet slike sada sa HDR jer se pravi tekstura sa ovom rezolucijom valjda. Takodje mora window manager u floating modu da radi*/
+const unsigned int SCR_HEIGHT = 600;
 bool blinn = false;
 bool blinnKeyPressed = false;
 bool freeCamKeyPressed = false;
@@ -94,6 +94,13 @@ struct DirLight {
     glm::vec3 specular;
 };
 
+struct SpotLight {
+    float constant;
+    float linear;
+    float quadratic;
+};
+
+
 struct ProgramState {
     glm::vec3 clearColor = glm::vec3(0);
     bool ImGuiEnabled = false;
@@ -116,6 +123,7 @@ struct ProgramState {
     float log2Scale = 0.250f;
     PointLight pointLight;
     DirLight dirLight;
+    SpotLight spotLight;
     ProgramState()
             : camera(glm::vec3(-9.0f, 3.0f, -12.0f)) {}
 
@@ -261,7 +269,10 @@ int main() {
     dirLight.diffuse =   glm::vec3( 0.4f, 0.4f, 0.6f);
     dirLight.specular =  glm::vec3(0.5f, 0.5f, 0.7f);
 
-
+    SpotLight& spotLight = programState->spotLight;
+    spotLight.constant = 1.0f;
+    spotLight.linear = 0.09f;
+    spotLight.quadratic = 0.032f;
     float skyboxVertices[] = {
             // positions
             -1.0f,  1.0f, -1.0f,
@@ -556,9 +567,9 @@ int main() {
         entityShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
         entityShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
         entityShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
-        entityShader.setFloat("spotLight.constant", 1.0f);
-        entityShader.setFloat("spotLight.linear", 0.09);
-        entityShader.setFloat("spotLight.quadratic", 0.032);
+        entityShader.setFloat("spotLight.constant", spotLight.constant);
+        entityShader.setFloat("spotLight.linear", spotLight.linear);
+        entityShader.setFloat("spotLight.quadratic", spotLight.quadratic);
         entityShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
         entityShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
         entityShader.setVec3("viewPos", programState->camera.Position);
@@ -651,9 +662,9 @@ int main() {
         terrainShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
         terrainShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
         terrainShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
-        terrainShader.setFloat("spotLight.constant", 1.0f);
-        terrainShader.setFloat("spotLight.linear", 0.09);
-        terrainShader.setFloat("spotLight.quadratic", 0.032);
+        terrainShader.setFloat("spotLight.constant", spotLight.constant);
+        terrainShader.setFloat("spotLight.linear", spotLight.linear);
+        terrainShader.setFloat("spotLight.quadratic", spotLight.quadratic);
         terrainShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
         terrainShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
         terrainShader.setVec3("viewPos", programState->camera.Position);
@@ -697,9 +708,9 @@ int main() {
         instancedShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
         instancedShader.setVec3("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
         instancedShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
-        instancedShader.setFloat("spotLight.constant", 1.0f);
-        instancedShader.setFloat("spotLight.linear", 0.09);
-        instancedShader.setFloat("spotLight.quadratic", 0.032);
+        instancedShader.setFloat("spotLight.constant", spotLight.constant);
+        instancedShader.setFloat("spotLight.linear", spotLight.linear);
+        instancedShader.setFloat("spotLight.quadratic", spotLight.quadratic);
         instancedShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
         instancedShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
         instancedShader.setVec3("viewPos", programState->camera.Position);
@@ -707,11 +718,12 @@ int main() {
         instancedShader.setFloat("material.shininess", 32.0f);
         instancedShader.setMat4("projection", projection);
         instancedShader.setMat4("view", view);
-        instancedShader.setInt("texture_diffuse1", 0); // Neophodno jer nema .Draw nego glDrawElements
-
+        instancedShader.setInt("texture_diffuse", 0); // Neophodno jer nema .Draw nego glDrawElements
+        instancedShader.setInt("texture_normal",1);
+        instancedShader.setInt("texture_specular", 2);
         instancedShader.setVec3("lightColor", glm::vec3(150.0f,88.0f,34.0f));
 
-        glActiveTexture(GL_TEXTURE0); // Neophodno jer nema .Draw nego glDrawElements
+       // glActiveTexture(GL_TEXTURE0); // Neophodno jer nema .Draw nego glDrawElements
         /*
             Ako pretpostavimo da je model zapravo skup od 4 drveta, taj skup sadrzi 4 debla i 4 grane npr.
             i to bi onda bilo treeModel.meshes.size() = 8.
@@ -722,10 +734,22 @@ int main() {
          */
         for(unsigned int i = 0; i < treeModel.meshes.size(); i++)
         {
-            if(i % 2 == 0)
+            glActiveTexture(GL_TEXTURE0);
+            if(i % 2 == 0) {
                 glBindTexture(GL_TEXTURE_2D, treeModel.textures_loaded[0].id); // Stavlja aktiviranu teksturu
-             else
+            }
+             else {
                 glBindTexture(GL_TEXTURE_2D, treeModel.textures_loaded[2].id);
+            }
+            glActiveTexture(GL_TEXTURE1);
+            if(i % 2 == 0) {
+                glBindTexture(GL_TEXTURE_2D, treeModel.textures_loaded[1].id);
+            }
+            else {
+                glBindTexture(GL_TEXTURE_2D, treeModel.textures_loaded[4].id);
+            }
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, treeModel.textures_loaded[3].id);
             glBindVertexArray(treeModel.meshes[i].VAO); // Binduje model sa aktivnom teksturom
 
             glDrawElementsInstanced(
@@ -737,9 +761,10 @@ int main() {
 
         for(unsigned int i = 0; i < grassModel.meshes.size(); i++)
         {
-
+            glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, grassModel.textures_loaded[0].id);
-
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, grassModel.textures_loaded[1].id);
             glBindVertexArray(grassModel.meshes[i].VAO);
 
             glDrawElementsInstanced(
@@ -768,7 +793,7 @@ int main() {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-
+        glActiveTexture(GL_TEXTURE0);
         // 2. We blur bright fragments with two-pass Gaussian Blur
         // --------------------------------------------------
         bool horizontal = true, first_iteration = true;
@@ -808,8 +833,8 @@ int main() {
         hdrShader.setFloat("exposure", exposure);
         renderQuad(); // Iscrtamo pravougaonik (preko celog ekrana) na koji je nalepljena tekstura
 
-        std::cout << "hdr: " << (hdr ? "on" : "off") << "| exposure: " << exposure << std::endl;
-        std::cout << "bloom: " << (bloom ? "on" : "off") << "| exposure: " << exposure << std::endl;
+//        std::cout << "hdr: " << (hdr ? "on" : "off") << "| exposure: " << exposure << std::endl;
+//        std::cout << "bloom: " << (bloom ? "on" : "off") << "| exposure: " << exposure << std::endl;
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
@@ -962,6 +987,10 @@ void DrawImGui(ProgramState *programState) {
         ImGui::DragFloat3("dirLight.ambient",  (float*)  &programState->dirLight.ambient);
         ImGui::DragFloat3("dirLight.diffuse", (float*) &programState->dirLight.diffuse);
         ImGui::DragFloat3("dirLight.specular",(float*) &programState->dirLight.specular);
+        ImGui::Text("SpotLight:");
+        ImGui::DragFloat("spotLight.constant", &programState->spotLight.constant, 0.05, 0.0, 3.0);
+        ImGui::DragFloat("spotLight.linear", &programState->spotLight.linear, 0.05, 0.0, 3.0);
+        ImGui::DragFloat("spotLight.quadratic", &programState->spotLight.quadratic, 0.05, 0.0, 3.0);
         ImGui::Text("Tent:");
         ImGui::DragFloat3("Tent position", (float*)&programState->tentPosition);
         ImGui::DragFloat("Tent rotation", &programState->tentRotation, 1.0, 0, 360);
