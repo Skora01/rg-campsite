@@ -51,6 +51,10 @@ in vec3 FragPos;
 in mat3 TBN;
 in vec3 TangentViewPos;
 in vec3 TangentFragPos;
+in vec3 dirDir;
+in vec3 pointPos;
+in vec3 spotPos;
+in vec3 spotDir;
 
 uniform DirLight dirLight;
 uniform PointLight pointLight;
@@ -61,9 +65,9 @@ uniform vec3 lightColor;
 uniform bool blinn;
 uniform vec3 viewPos;
 
-vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
+vec3 CalcDirLight(vec3 dirDir, DirLight light, vec3 normal, vec3 viewDir)
 {
-    vec3 lightDir = normalize(-light.direction);
+   vec3 lightDir= normalize(-dirDir);
     // diffuse shading
     float diff = max(dot(normal, lightDir), 0.0);
     // specular shading
@@ -86,9 +90,9 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
 }
 
 // calculates the color when using a point light.
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
+vec3 CalcPointLight(vec3 pointPos, PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 {
-    vec3 lightDir = normalize(light.position - fragPos);
+    vec3 lightDir = normalize(pointPos - fragPos);
     // diffuse shading
     float diff = max(dot(normal, lightDir), 0.0);
     // specular shading
@@ -104,7 +108,8 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
         spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
     }
     // attenuation
-    float distance = length(light.position - fragPos);
+    float distance = length(pointPos - fragPos);
+
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
     // combine results
     vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse1, TexCoords));
@@ -113,12 +118,15 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     ambient *= attenuation;
     diffuse *= attenuation;
     specular *= attenuation;
-    return (ambient + diffuse + specular)*lightColor;
+
+    return (ambient + diffuse + specular);
+
+    //return (ambient + diffuse + specular);//*lightColor;
 }
 
-vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
+vec3 CalcSpotLight(vec3 spotPos, vec3 spotDir, SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 {
-    vec3 lightDir = normalize(light.position*TBN - fragPos);
+    vec3 lightDir = normalize(light.position - fragPos);
     // diffuse shading
     float diff = max(dot(normal, lightDir), 0.0);
     // specular shading
@@ -135,7 +143,7 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     }
     //float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
     // attenuation
-    float distance = length(light.position*TBN - fragPos);
+    float distance = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
     // spotlight intensity
     float theta = dot(lightDir, normalize(-light.direction));
@@ -148,6 +156,7 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     ambient *= attenuation * intensity;
     diffuse *= attenuation * intensity;
     specular *= attenuation * intensity;
+
     return (ambient + diffuse + specular);
 }
 
@@ -163,14 +172,14 @@ void main()
     norm = normalize(norm * 2.0 - 1.0);
     vec3 viewDir = normalize(TangentViewPos - TangentFragPos);
     // phase 1: directional lighting
-    vec3 result = CalcDirLight(dirLight, norm, viewDir);
+    vec3 result = CalcDirLight(dirDir, dirLight, norm, viewDir);
     // phase 2: point lights
     //for(int i = 0; i < NR_POINT_LIGHTS; i++)
 
-    result += CalcPointLight(pointLight, norm, TangentFragPos, viewDir);
+    result += CalcPointLight(pointPos, pointLight, norm, TangentFragPos, viewDir);
 
     // phase 3: spot light
-   result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
+    result += CalcSpotLight(spotDir, spotPos, spotLight, norm, FragPos, viewDir);
 
     // Prebaci rezultat u grayscale da bi se proverilo da li prelazi osvetljenje neki prag (1.0)
     // U slucaju da prelazi treba to ispisati u drugi color buffer (BrightColor)
@@ -181,5 +190,6 @@ void main()
         BrightColor = vec4(0.0, 0.0, 0.0, 1.0); // Black color
 
     FragColor = vec4(result, 1.0);
+
 
 }

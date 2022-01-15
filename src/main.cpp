@@ -65,7 +65,11 @@ bool hdr = true;
 bool hdrKeyPressed = false;
 bool bloom = true;
 bool bloomKeyPressed = false;
+bool flag = false;
+bool flagKeyPressed;
 float exposure = 1.0f;
+glm::vec3 lightColor = glm::vec3(150.0f,88.0f,34.0f);
+
 // camera
 
 float lastX = SCR_WIDTH / 2.0f;
@@ -254,9 +258,9 @@ int main() {
 
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(0.0f, 0.1f, 1.0);
-    pointLight.ambient = glm::vec3(0.1, 0.1, 0.1);
-    pointLight.diffuse = glm::vec3(0.6, 0.6, 0.6);
-    pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
+    pointLight.ambient = glm::vec3(lightColor.x*0.1, lightColor.y*0.1, lightColor.z*0.1);
+    pointLight.diffuse = lightColor;
+    pointLight.specular = lightColor;
 
     pointLight.constant = 1.0f;
     pointLight.linear = 0.09f;
@@ -265,9 +269,9 @@ int main() {
 
     DirLight& dirLight = programState->dirLight;
     dirLight.direction = glm::vec3(-1.0f, 173.8f, -35.3f); // -1.0f, -0.2f, -2.3f
-    dirLight.ambient =   glm::vec3(0.05f, 0.05f, 0.20f);
-    dirLight.diffuse =   glm::vec3( 0.4f, 0.4f, 0.6f);
-    dirLight.specular =  glm::vec3(0.5f, 0.5f, 0.7f);
+    dirLight.ambient =   glm::vec3(0.0f, 0.0f, 0.0f);
+    dirLight.diffuse =   glm::vec3( 0.05f, 0.05f, 0.05f);
+    dirLight.specular =  glm::vec3(0.2f, 0.2f, 0.2f);
 
     SpotLight& spotLight = programState->spotLight;
     spotLight.constant = 1.0f;
@@ -570,10 +574,11 @@ int main() {
         entityShader.setFloat("spotLight.constant", spotLight.constant);
         entityShader.setFloat("spotLight.linear", spotLight.linear);
         entityShader.setFloat("spotLight.quadratic", spotLight.quadratic);
-        entityShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
-        entityShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
+        entityShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(10.0f))); //0.98480775301
+        entityShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f))); //0.96592582628
         entityShader.setVec3("viewPos", programState->camera.Position);
         entityShader.setInt("blinn", blinn);
+        entityShader.setInt("flag", flag);
         entityShader.setFloat("material.shininess", 32.0f);
         // view/projection transformations
         glm::mat4 view = programState->camera.GetViewMatrix();
@@ -645,10 +650,11 @@ int main() {
         terrainShader.setInt("terrainSpecular", 3);
         terrainShader.setMat4("projection", projection);
         terrainShader.setMat4("view", view);
-        terrainShader.setVec3("dirLight.direction", -1.0f, -0.2f, -0.3f);
-        terrainShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.20f);
-        terrainShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.6f);
-        terrainShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.7f);
+        terrainShader.setVec3("dirLight.direction", dirLight.direction);
+        terrainShader.setVec3("dirLight.ambient", dirLight.ambient);
+        terrainShader.setVec3("dirLight.diffuse", dirLight.diffuse);
+        terrainShader.setVec3("dirLight.specular", dirLight.specular);
+        //pointlight
         terrainShader.setVec3("pointLight.position", pointLight.position);
         terrainShader.setVec3("pointLight.ambient", pointLight.ambient);
         terrainShader.setVec3("pointLight.diffuse", pointLight.diffuse);
@@ -715,6 +721,7 @@ int main() {
         instancedShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
         instancedShader.setVec3("viewPos", programState->camera.Position);
         instancedShader.setInt("blinn", blinn);
+        instancedShader.setInt("flag", flag);
         instancedShader.setFloat("material.shininess", 32.0f);
         instancedShader.setMat4("projection", projection);
         instancedShader.setMat4("view", view);
@@ -876,8 +883,17 @@ void processInput(GLFWwindow *window) {
         programState->camera.freeCam = !programState->camera.freeCam;
         freeCamKeyPressed = true;
     }
+
     if (glfwGetKey(window, GLFW_KEY_T) == GLFW_RELEASE) {
         freeCamKeyPressed = false;
+    }
+    //flag on/of
+    if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS && !flagKeyPressed) {
+        flag = !flag;
+        flagKeyPressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_L) == GLFW_RELEASE) {
+        flagKeyPressed = false;
     }
     //turning on Blinn-Phong lighting
     if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !blinnKeyPressed) {

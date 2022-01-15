@@ -12,7 +12,7 @@ d 1.000000
 illum 3
 map_Bump Campfire_MAT_Normal_JL.jpg
 map_Kd Campfire_MAT_BaseColor_01.jpg
-map_Ns Campfire_MAT_Roughness.jpg
+map_Ks Campfire_MAT_Roughness.jpg
 refl Campfire_MAT_Metallic.jpg
 
 newmtl Campfire_fire_MAT

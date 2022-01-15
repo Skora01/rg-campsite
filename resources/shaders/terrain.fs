@@ -105,7 +105,7 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec2 texCoords)
 {
-    vec3 lightDir = normalize(-light.direction);
+    vec3 lightDir = normalize(-TBN*light.direction);
     // diffuse shading
     float diff = max(dot(normal, lightDir), 0.0);
     // specular shading
@@ -130,7 +130,7 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec2 texCoords)
 // calculates the color when using a point light.
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec2 texCoords)
 {
-    vec3 lightDir = normalize(light.position*TBN - fragPos);
+    vec3 lightDir = normalize(TBN*light.position - fragPos);
     // diffuse shading
     float diff = max(dot(normal, lightDir), 0.0);
     // specular shading
@@ -146,7 +146,7 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, v
         spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
     }
     // attenuation
-    float distance = length(light.position*TBN - fragPos);
+    float distance = length(TBN*light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
     // combine results
     vec3 ambient = light.ambient * vec3(texture(terrainTexture, texCoords));
@@ -155,7 +155,7 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, v
     ambient *= attenuation;
     diffuse *= attenuation;
     specular *= attenuation;
-    return (ambient + diffuse + specular)*lightColor;
+    return (ambient + diffuse + specular);
 }
 
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec2 texCoords)

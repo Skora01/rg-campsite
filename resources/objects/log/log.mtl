@@ -12,4 +12,4 @@ d 1.000000
 illum 2
 map_Bump low2_ret_normal.jpg
 map_Kd low2_retb.jpg
-map_Ns low2_ret_occlusion.jpg
+map_Ks low2_ret_occlusion.jpg
