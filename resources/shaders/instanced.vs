@@ -7,7 +7,6 @@ layout (location = 4) in vec3 aBitangent;
 layout (location = 5) in mat4 aInstanceMatrix;
 
 out vec2 TexCoords;
-out vec3 Normal;
 out vec3 FragPos;
 out mat3 TBN;
 out vec3 TangentViewPos;
@@ -21,7 +20,6 @@ uniform vec3 viewPos;
 void main()
 {
     FragPos = vec3(aInstanceMatrix * vec4(aPos, 1.0));
-    Normal = aNormal;
     TexCoords = aTexCoords;
 
     mat3 normalMatrix = transpose(inverse(mat3(aInstanceMatrix)));

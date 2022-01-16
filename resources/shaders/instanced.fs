@@ -163,7 +163,6 @@ void main()
         discard;
 
     // properties
-    //vec3 norm = normalize(Normal);
     vec3 norm = texture(texture_normal, TexCoords).rgb;
     norm = normalize(norm * 2.0 - 1.0);
     vec3 viewDir = normalize(TangentViewPos - TangentFragPos);
