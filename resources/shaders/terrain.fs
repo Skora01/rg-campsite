@@ -48,7 +48,6 @@ in mat3 TBN;
 uniform DirLight dirLight;
 uniform PointLight pointLight;
 uniform SpotLight spotLight;
-uniform vec3 lightColor;
 
 uniform sampler2D terrainTexture;
 uniform sampler2D terrainNormal;
@@ -57,14 +56,11 @@ uniform sampler2D terrainSpecular;
 
 uniform float height_scale;
 uniform bool blinn;
-uniform vec3 viewPos;
 
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
 {
-//     float height =  texture(terrainHeight, texCoords).r;
-//     vec2 p = viewDir.xy / viewDir.z * (height * height_scale);
-//     return texCoords - p;
-        // number of depth layers
+
+    // number of depth layers
     const float minLayers = 8;
     const float maxLayers = 32;
     float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));
@@ -175,7 +171,6 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec
     {
         spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
     }
-    //float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
     // attenuation
     float distance = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
@@ -214,7 +209,7 @@ void main()
     if(brightness > 1.0)
         BrightColor = vec4(result, 1.0);
     else
-        BrightColor = vec4(0.0, 0.0, 0.0, 1.0); // Black color
+        BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
 
     FragColor = vec4(result, 1.0);
 }

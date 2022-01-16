@@ -46,7 +46,6 @@ struct Material {
 };
 
 in vec2 TexCoords;
-in vec3 Normal;
 in vec3 FragPos;
 in mat3 TBN;
 in vec3 TangentViewPos;
@@ -60,8 +59,6 @@ uniform DirLight dirLight;
 uniform PointLight pointLight;
 uniform SpotLight spotLight;
 uniform Material material;
-uniform vec3 lightColor;
-
 
 uniform bool blinn;
 uniform vec3 viewPos;
@@ -121,8 +118,6 @@ vec3 CalcPointLight(vec3 pointPos, PointLight light, vec3 normal, vec3 fragPos, 
     specular *= attenuation;
 
     return (ambient + diffuse + specular);
-
-    //return (ambient + diffuse + specular);//*lightColor;
 }
 
 vec3 CalcSpotLight(vec3 spotPos, vec3 spotDir, SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
@@ -142,7 +137,6 @@ vec3 CalcSpotLight(vec3 spotPos, vec3 spotDir, SpotLight light, vec3 normal, vec
     {
         spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
     }
-    //float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
     // attenuation
     float distance = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
@@ -174,21 +168,16 @@ void main()
     vec3 viewDir = normalize(TangentViewPos - TangentFragPos);
     // phase 1: directional lighting
     vec3 result = CalcDirLight(dirDir, dirLight, norm, viewDir);
-    // phase 2: point lights
-    //for(int i = 0; i < NR_POINT_LIGHTS; i++)
-
+    // phase 2: point light
     result += CalcPointLight(pointPos, pointLight, norm, TangentFragPos, viewDir);
-
     // phase 3: spot light
     result += CalcSpotLight(spotDir, spotPos, spotLight, norm, FragPos, viewDir);
 
-    // Prebaci rezultat u grayscale da bi se proverilo da li prelazi osvetljenje neki prag (1.0)
-    // U slucaju da prelazi treba to ispisati u drugi color buffer (BrightColor)
     float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
     if(brightness > 1.0)
         BrightColor = vec4(result, 1.0);
     else
-        BrightColor = vec4(0.0, 0.0, 0.0, 1.0); // Black color
+        BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
 
     FragColor = vec4(result, 1.0);
 

@@ -43,7 +43,6 @@ struct SpotLight {
 
 
 out vec2 TexCoords;
-out vec3 Normal;
 out vec3 FragPos;
 out mat3 TBN;
 out vec3 TangentViewPos;
@@ -64,10 +63,9 @@ uniform PointLight pointLight;
 void main()
 {
     FragPos = vec3(model * vec4(aPos, 1.0));
-    Normal = aNormal;
     TexCoords = aTexCoords;
 
-    mat3 normalMatrix = transpose(inverse(mat3(model))); //model * view try
+    mat3 normalMatrix = transpose(inverse(mat3(model)));
     vec3 T = normalize(normalMatrix * aTangent);
     vec3 N = normalize(normalMatrix * aNormal);
     T = normalize(T - dot(T, N) * N);

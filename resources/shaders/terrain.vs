@@ -5,7 +5,6 @@ layout (location = 2) in vec2 aTexCoords;
 layout (location = 3) in vec3 aTangent;
 layout (location = 4) in vec3 aBitangent;
 
-
 out vec3 FragPos;
 out vec2 TexCoords;
 out vec3 TangentViewPos;

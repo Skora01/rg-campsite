@@ -39,9 +39,9 @@ void renderQuad();
 bool checkOverlapping(float targetX, float targetY, glm::vec3 center, float overlappingOffset);
 
 // settings
-const unsigned int SCR_WIDTH = 1280;
-const unsigned int SCR_HEIGHT = 1024;
-bool blinn = false;
+const unsigned int SCR_WIDTH = 800;
+const unsigned int SCR_HEIGHT = 600;
+bool blinn = true;
 bool blinnKeyPressed = false;
 bool freeCamKeyPressed = false;
 float heightScale = 0.1;
@@ -49,8 +49,6 @@ bool hdr = true;
 bool hdrKeyPressed = false;
 bool bloom = true;
 bool bloomKeyPressed = false;
-bool flag = false;
-bool flagKeyPressed;
 float exposure = 1.0f;
 glm::vec3 lightColor = glm::vec3(150.0f,88.0f,34.0f);
 
@@ -97,15 +95,19 @@ struct ProgramState {
     glm::vec3 tentPosition = glm::vec3(13.0f, 3.0f, 12.0f);
     float tentRotation = 137.0f;
     float tentScale = 500.0f;
+
     glm::vec3 tent2Position = glm::vec3(-16.0f, 0.0f, 8.0f);
     float tent2Rotation = 31.0f;
     float tent2Scale = 400.0f;
+
     glm::vec3 logPosition = glm::vec3(5.0f,-0.2f,0.0f);
     float logRotation = 90.0f;
     float logScale = 0.150f;
+
     glm::vec3 secondLogPosition = glm::vec3(-4.0f,-0.2f,0.0f);
     float secondLogRotation = 250.0f;
     float secondLogScale = 0.130f;
+
     glm::vec3 log2Position = glm::vec3(0.0f,0.0f,5.0f);
     float log2Rotation = 250.0f;
     float log2Scale = 0.250f;
@@ -115,7 +117,7 @@ struct ProgramState {
     float guitarRotationX = 354.0f;
     float guitarScale = 0.250;
 
-    glm::vec3 ratPosition = glm::vec3(-42.0f, 0.0f, 43.0f); // TODO
+    glm::vec3 ratPosition = glm::vec3(-42.0f, 0.0f, 43.0f);
     float ratRotationY = 1.0f;
     float ratScale = 0.015f;
 
@@ -143,7 +145,7 @@ struct ProgramState {
     DirLight dirLight;
     SpotLight spotLight;
     ProgramState()
-            : camera(glm::vec3(-9.0f, 3.0f, -12.0f)) {}
+            : camera(glm::vec3(-22.0f, 3.0f, -47.0f)) {}
 
     void SaveToFile(std::string filename);
 
@@ -257,7 +259,7 @@ int main() {
     // Tent model
     Model tentModel("resources/objects/tent/tent.obj");
     tentModel.SetShaderTextureNamePrefix("material.");
-    //Secode tent model
+    //Second tent model
     Model tent2Model("resources/objects/tent2.0/tent.obj");
     tent2Model.SetShaderTextureNamePrefix("material.");
     //Campfire model
@@ -274,7 +276,7 @@ int main() {
     Model guitarModel("resources/objects/guitar/guitar.obj");
     guitarModel.SetShaderTextureNamePrefix("material.");
 
-    // Monster Model
+    // Rat Model
     Model ratModel("resources/objects/rat/rat.obj");
     ratModel.SetShaderTextureNamePrefix("material.");
 
@@ -304,9 +306,8 @@ int main() {
     pointLight.linear = 0.05f;
     pointLight.quadratic = 7.05f;
 
-
     DirLight& dirLight = programState->dirLight;
-    dirLight.direction = glm::vec3(-1.0f, 173.8f, -35.3f); // -1.0f, -0.2f, -2.3f
+    dirLight.direction = glm::vec3(-1.0f, 173.8f, -35.3f);
     dirLight.ambient =   glm::vec3(0.0f, 0.0f, 0.0f);
     dirLight.diffuse =   glm::vec3( 0.05f, 0.05f, 0.05f);
     dirLight.specular =  glm::vec3(0.2f, 0.2f, 0.2f);
@@ -375,8 +376,10 @@ int main() {
     unsigned int terrainNormal  = loadTexture(FileSystem::getPath("resources/textures/terrain_normal.jpeg").c_str());
     unsigned int terrainSpecular = loadTexture(FileSystem::getPath("resources/textures/terrain_metallic.jpeg").c_str());
     unsigned int terrainHeight = loadTexture(FileSystem::getPath("resources/textures/terrain_height.jpeg").c_str());
-    // draw in wireframe
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    /*
+         Mozete da probate da stavite brick teksturu na kojoj se bolje primeti uticaj parallax mapping-a
+     */
 
     //load skybox
     vector<std::string> faces
@@ -571,26 +574,6 @@ int main() {
 
     int timer = 0;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     // Audio
     sf::Music crows;
     sf::Music wind;
@@ -635,21 +618,18 @@ int main() {
         // 1. We render the scene into the floating point framebuffer
         glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
 
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Zasto opet glClear? // Jer sada clearujemo/postavljamo vrednosti za nas framebuffer a gore smo za default
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glEnable(GL_CULL_FACE); // Enable face culling
 
         // don't forget to enable shader before setting uniforms
         entityShader.use();
-
         // Directional light
         entityShader.setInt("helpTexture", 4);
         entityShader.setVec3("dirLight.direction", dirLight.direction);
-        // entityShader.setVec3("dirLight.direction", -1.0f, -0.2f, -0.3f);
         entityShader.setVec3("dirLight.ambient", dirLight.ambient);
         entityShader.setVec3("dirLight.diffuse", dirLight.diffuse);
         entityShader.setVec3("dirLight.specular", dirLight.specular);
-
         // Point light
         entityShader.setVec3("pointLight.position", pointLight.position);
         entityShader.setVec3("pointLight.ambient", pointLight.ambient);
@@ -658,7 +638,7 @@ int main() {
         entityShader.setFloat("pointLight.constant", pointLight.constant);
         entityShader.setFloat("pointLight.linear", pointLight.linear);
         entityShader.setFloat("pointLight.quadratic", pointLight.quadratic);
-        // Spotlight (turn on if u want flashlight)
+        // Spotlight
         entityShader.setVec3("spotLight.position", programState->camera.Position);
         entityShader.setVec3("spotLight.direction", programState->camera.Front);
         entityShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
@@ -667,8 +647,8 @@ int main() {
         entityShader.setFloat("spotLight.constant", spotLight.constant);
         entityShader.setFloat("spotLight.linear", spotLight.linear);
         entityShader.setFloat("spotLight.quadratic", spotLight.quadratic);
-        entityShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(10.0f))); //0.98480775301
-        entityShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f))); //0.96592582628
+        entityShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(10.0f)));
+        entityShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
         entityShader.setVec3("viewPos", programState->camera.Position);
         entityShader.setInt("blinn", blinn);
         entityShader.setFloat("material.shininess", 32.0f);
@@ -705,7 +685,6 @@ int main() {
         // Render loaded campfire model
         model = glm::mat4(1.0f);
         model = glm::translate(model, pointLight.position);
-        entityShader.setVec3("lightColor", glm::vec3(150.0f,88.0f,34.0f));
         entityShader.setMat4("model", model);
         campfireModel.Draw(entityShader);
 
@@ -818,7 +797,7 @@ int main() {
         entityShader.setMat4("model", model);
         boulderModel.Draw(entityShader);
 
-        // Render boulder model
+        // Render boulder2 model
         model = glm::mat4(1.0f);
         model = glm::translate(model, programState->boulder2Position);
         model = glm::rotate(model, glm::radians(programState->boulder2RotationX), glm::vec3(1, 0, 0));
@@ -846,8 +825,6 @@ int main() {
         entityShader.setMat4("model", model);
         axeModel.Draw(entityShader);
 
-
-
         //Loading terrain
         terrainShader.use();
         terrainShader.setInt("terrainTexture", 0);
@@ -856,11 +833,12 @@ int main() {
         terrainShader.setInt("terrainSpecular", 3);
         terrainShader.setMat4("projection", projection);
         terrainShader.setMat4("view", view);
+        //dirLight
         terrainShader.setVec3("dirLight.direction", dirLight.direction);
         terrainShader.setVec3("dirLight.ambient", dirLight.ambient);
         terrainShader.setVec3("dirLight.diffuse", dirLight.diffuse);
         terrainShader.setVec3("dirLight.specular", dirLight.specular);
-        //pointlight
+        //pointLight
         terrainShader.setVec3("pointLight.position", pointLight.position);
         terrainShader.setVec3("pointLight.ambient", pointLight.ambient);
         terrainShader.setVec3("pointLight.diffuse", pointLight.diffuse);
@@ -868,8 +846,7 @@ int main() {
         terrainShader.setFloat("pointLight.constant", pointLight.constant);
         terrainShader.setFloat("pointLight.linear", pointLight.linear);
         terrainShader.setFloat("pointLight.quadratic", pointLight.quadratic);
-
-        // Spotlight (turn on if u want flashlight)
+        // Spotlight
         terrainShader.setVec3("spotLight.position", programState->camera.Position);
         terrainShader.setVec3("spotLight.direction", programState->camera.Front);
         terrainShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
@@ -881,7 +858,6 @@ int main() {
         terrainShader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
         terrainShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
         terrainShader.setVec3("viewPos", programState->camera.Position);
-        terrainShader.setVec3("lightColor", glm::vec3(150.0f,88.0f,34.0f));
         terrainShader.setInt("blinn", blinn);
         
         // render normal-mapped terrain
@@ -898,17 +874,10 @@ int main() {
         glBindTexture(GL_TEXTURE_2D, terrainSpecular);
         renderTerrain();
 
-
         glDisable(GL_CULL_FACE);
-
-
-
-
-
 
         // Render instanced trees
         instancedShader.use();
-
         //directional light
         instancedShader.setVec3("dirLight.direction", dirLight.direction);
         instancedShader.setVec3("dirLight.ambient", dirLight.ambient);
@@ -922,7 +891,7 @@ int main() {
         instancedShader.setFloat("pointLight.constant", pointLight.constant);
         instancedShader.setFloat("pointLight.linear", pointLight.linear);
         instancedShader.setFloat("pointLight.quadratic", pointLight.quadratic);
-        //spotlight (turn on if u want flashlight)
+        //spotlight
         instancedShader.setVec3("spotLight.position", programState->camera.Position);
         instancedShader.setVec3("spotLight.direction", programState->camera.Front);
         instancedShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
@@ -935,28 +904,18 @@ int main() {
         instancedShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
         instancedShader.setVec3("viewPos", programState->camera.Position);
         instancedShader.setInt("blinn", blinn);
-        instancedShader.setInt("flag", flag);
         instancedShader.setFloat("material.shininess", 32.0f);
         instancedShader.setMat4("projection", projection);
         instancedShader.setMat4("view", view);
-        instancedShader.setInt("texture_diffuse", 0); // Neophodno jer nema .Draw nego glDrawElements
+        instancedShader.setInt("texture_diffuse", 0);
         instancedShader.setInt("texture_normal",1);
         instancedShader.setInt("texture_specular", 2);
-        instancedShader.setVec3("lightColor", glm::vec3(150.0f,88.0f,34.0f));
 
-        /*
-            Ako pretpostavimo da je model zapravo skup od 4 drveta, taj skup sadrzi 4 debla i 4 grane npr.
-            i to bi onda bilo treeModel.meshes.size() = 8.
-            Za i = 0, prvo ce se povezati tekstura grane, bindovati VAO, i onda ce DrawElementsInstanced
-            da iscrta za 10 (amount = 10) modela grane na njihovom prvom meshu (prvom drvetu u skupu/modelu).
-
-            Onda ce za i = 1 da iscrta deblo za prvi mesh/drvo u skupu/modelu, onda opet za i=2 granu, i=3 deblo itd.
-         */
         for(unsigned int i = 0; i < treeModel.meshes.size(); i++)
         {
             glActiveTexture(GL_TEXTURE0);
             if(i % 2 == 0) {
-                glBindTexture(GL_TEXTURE_2D, treeModel.textures_loaded[0].id); // Stavlja aktiviranu teksturu
+                glBindTexture(GL_TEXTURE_2D, treeModel.textures_loaded[0].id);
                 glDisable(GL_CULL_FACE); // We don't want face culling when the branches are drawn
             }
              else {
@@ -972,7 +931,7 @@ int main() {
             }
             glActiveTexture(GL_TEXTURE2);
             glBindTexture(GL_TEXTURE_2D, treeModel.textures_loaded[3].id);
-            glBindVertexArray(treeModel.meshes[i].VAO); // Binduje model sa aktivnom teksturom
+            glBindVertexArray(treeModel.meshes[i].VAO);
 
             glDrawElementsInstanced(
                         GL_TRIANGLES, treeModel.meshes[i].indices.size(), GL_UNSIGNED_INT, 0, amount
@@ -1011,12 +970,8 @@ int main() {
         glBindVertexArray(0);
         glDepthFunc(GL_LESS); // set depth function back to default
 
-
-        // Unbindujemo nas framebuffer
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-
-        glActiveTexture(GL_TEXTURE0);
         // 2. We blur bright fragments with two-pass Gaussian Blur
         // --------------------------------------------------
         glActiveTexture(GL_TEXTURE0);
@@ -1028,12 +983,6 @@ int main() {
             glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
             shaderBlur.setInt("horizontal", horizontal);
             glBindTexture(GL_TEXTURE_2D, first_iteration ? colorBuffers[1] : pingpongColorbuffers[!horizontal]);  // bind texture of other framebuffer (or scene if first iteration)
-            // pingpongColorbuffers[!horizontal] // [1] ako je horizontal == false == 0 i [0] ako je horizontal == true == 1 ?
-            // Kako tacno blurujemo ovde?
-            /* Moje misljenje: Tako sto, u zavisnosti od bool vrednosti horizontal promenljive,
-             * blurujemo ili horizontalne piksele ili vertikalne. Weights su tezine tj. koliko
-             * jako ce biti blurovani pikseli, svaki naredni (sto dalje od centra) ce biti blurovan
-             * sve manje i manje u blur.fs tako sto ce se mnoziti sa sve manjom tezinom */
             renderQuad();
             horizontal = !horizontal;
             if (first_iteration)
@@ -1041,24 +990,18 @@ int main() {
         }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-
-
         // 3. Now we render floating point color buffer to a 2D quad and tonemap HDR colors to a default framebuffer
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Da li je ovo neohpodno ako smo to vec uradili pre pravljenja naseg framebuffera? Mozda za svaki slucaj.
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         hdrShader.use();
-
-        glActiveTexture(GL_TEXTURE0); // Aktiviramo teksturu (== scenu)
+        glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, colorBuffers[0]);
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[!horizontal]); // ? Zasto ne pingpongColorbuffers[1]?
+        glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[!horizontal]);
         hdrShader.setInt("bloom", bloom);
         hdrShader.setInt("hdr", hdr);
         hdrShader.setFloat("exposure", exposure);
-        renderQuad(); // Iscrtamo pravougaonik (preko celog ekrana) na koji je nalepljena tekstura
-
-//        std::cout << "hdr: " << (hdr ? "on" : "off") << "| exposure: " << exposure << std::endl;
-//        std::cout << "bloom: " << (bloom ? "on" : "off") << "| exposure: " << exposure << std::endl;
+        renderQuad();
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
@@ -1096,21 +1039,13 @@ void processInput(GLFWwindow *window) {
         programState->camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         programState->camera.ProcessKeyboard(RIGHT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS && !freeCamKeyPressed) {
+    //turning on FreeCam
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS && !freeCamKeyPressed) {
         programState->camera.freeCam = !programState->camera.freeCam;
         freeCamKeyPressed = true;
     }
-
-    if (glfwGetKey(window, GLFW_KEY_T) == GLFW_RELEASE) {
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE) {
         freeCamKeyPressed = false;
-    }
-    //flag on/of
-    if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS && !flagKeyPressed) {
-        flag = !flag;
-        flagKeyPressed = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_L) == GLFW_RELEASE) {
-        flagKeyPressed = false;
     }
     //turning on Blinn-Phong lighting
     if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !blinnKeyPressed) {
@@ -1142,7 +1077,7 @@ void processInput(GLFWwindow *window) {
       {
           hdrKeyPressed = false;
       }
-
+    //turning on/off bloom
       if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS && !bloomKeyPressed)
       {
           bloom = !bloom;
@@ -1152,8 +1087,7 @@ void processInput(GLFWwindow *window) {
       {
           bloomKeyPressed = false;
       }
-
-
+    //turning on/off bloom
       if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
       {
           if (exposure > 0.0f)
@@ -1287,8 +1221,6 @@ void DrawImGui(ProgramState *programState) {
         ImGui::DragFloat3("towel position", (float*)&programState->towelPosition);
         ImGui::DragFloat("towel rotation", &programState->towelRotation, 1.0, 0, 360);
         ImGui::DragFloat("towel scale", &programState->towelScale, 1.0, 50.0, 70.0);
-
-
 
         ImGui::End();
     }
