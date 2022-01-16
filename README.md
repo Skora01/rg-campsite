@@ -35,10 +35,11 @@ Project from Graphics using Opengl
 
 
 ## Deployment
-1.   git clone https://github.com/Skora01/rg-campsite.git
-2.   CLion -> Open -> path/to/my/project
-3.   Main function in src/main.cpp
-5.   ALT+SHIFT+F10 -> project_base -> run
+1. git clone https://github.com/Skora01/rg-campsite.git
+2. CLion -> Open -> path/to/my/project
+3. git submodule update --init --recursive
+4. Main function in src/main.cpp
+5. ALT+SHIFT+F10 -> project_base -> run
 
 
 ## Key Bindings

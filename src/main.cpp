@@ -599,6 +599,9 @@ int main() {
     if(!screech.openFromFile("resources/audio/screech.mp3"))
         return -1;
 
+bool firstTimeFront = true;
+bool firstTimeBehind = true;
+float firstCoor, thirdCoord;
     while (!glfwWindowShouldClose(window)) {
         // per-frame time logic
         // --------------------
@@ -625,7 +628,6 @@ int main() {
         // don't forget to enable shader before setting uniforms
         entityShader.use();
         // Directional light
-        entityShader.setInt("helpTexture", 4);
         entityShader.setVec3("dirLight.direction", dirLight.direction);
         entityShader.setVec3("dirLight.ambient", dirLight.ambient);
         entityShader.setVec3("dirLight.diffuse", dirLight.diffuse);
@@ -761,13 +763,24 @@ int main() {
         }
         else if(timer > 2100 && timer <= 2200)
         {
-            model = glm::translate(model, glm::vec3(programState->camera.Position.x, 0.0f, programState->camera.Position.z + 5.0f));
+            if(firstTimeFront) {
+                firstCoor = programState->camera.Position.x;
+                thirdCoord = programState->camera.Position.z;
+                firstTimeFront = false;
+            }
+            model = glm::translate(model, glm::vec3(firstCoor, 0.0f,thirdCoord + 5.0f));
             model = glm::rotate(model, glm::radians(38.0f), glm::vec3(0, 1, 0));
             model = glm::scale(model, glm::vec3(programState->ratScale));
         }
         else if(timer > 2200 && timer <= 2450)
         {
-            model = glm::translate(model, glm::vec3(programState->camera.Position.x, 0.0f, programState->camera.Position.z - 5.0f));
+            if(firstTimeBehind) {
+                firstCoor = programState->camera.Position.x;
+                thirdCoord = programState->camera.Position.z;
+
+                firstTimeBehind = false;
+            }
+            model = glm::translate(model, glm::vec3(firstCoor, 0.0f,thirdCoord - 5.0f));
             model = glm::rotate(model, glm::radians(218.0f), glm::vec3(0, 1, 0));
             model = glm::scale(model, glm::vec3(programState->ratScale));
         }
@@ -784,9 +797,6 @@ int main() {
                 wind.play();
             }
         }
-
-
-
         entityShader.setMat4("model", model);
         ratModel.Draw(entityShader);
         //Render boulder model
