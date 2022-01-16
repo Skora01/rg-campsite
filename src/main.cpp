@@ -602,9 +602,15 @@ int main() {
     if(!screech.openFromFile("resources/audio/screech.mp3"))
         return -1;
 
-bool firstTimeFront = true;
-bool firstTimeBehind = true;
-float firstCoor, thirdCoord;
+    horror.setVolume(20.f);
+    screech.setVolume(20.f);
+    crows.setVolume(20.f);
+    wind.setVolume(20.f);
+    walking.setVolume(20.f);
+
+    bool firstTimeFront = true;
+    bool firstTimeBehind = true;
+    float firstCoor, thirdCoord;
     while (!glfwWindowShouldClose(window)) {
         // per-frame time logic
         // --------------------
@@ -804,11 +810,11 @@ float firstCoor, thirdCoord;
         if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS)
         {
 
-            crows.stop();
-            wind.stop();
-            walking.stop();
-            horror.stop();
-            screech.stop();
+            horror.setVolume(0.f);
+            screech.setVolume(0.f);
+            crows.setVolume(0.f);
+            wind.setVolume(0.f);
+            walking.setVolume(0.f);
         }
 
 
