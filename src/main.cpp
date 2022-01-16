@@ -132,6 +132,9 @@ struct ProgramState {
     float axeRotationZ = 123.0f;
     float axeScale = 2.05f;
 
+    glm::vec3 towelPosition = glm::vec3(-12.0f,0.2f,6.0f);
+    float towelRotation = 57.0f;
+    float towelScale = 70.0f;
 
     PointLight pointLight;
     DirLight dirLight;
@@ -279,8 +282,12 @@ int main() {
     Model axeModel("resources/objects/axe/axe.obj");
     axeModel.SetShaderTextureNamePrefix("material.");
 
+    //Boulder model
     Model boulderModel("resources/objects/boulder/boulder1.obj");
     boulderModel.SetShaderTextureNamePrefix("material.");
+
+    Model towelModel("resources/objects/towel/towel.obj");
+    towelModel.SetShaderTextureNamePrefix("material.");
 
     PointLight& pointLight = programState->pointLight;
 
@@ -364,6 +371,7 @@ int main() {
     unsigned int terrainNormal  = loadTexture(FileSystem::getPath("resources/textures/terrain_normal.jpeg").c_str());
     unsigned int terrainSpecular = loadTexture(FileSystem::getPath("resources/textures/terrain_metallic.jpeg").c_str());
     unsigned int terrainHeight = loadTexture(FileSystem::getPath("resources/textures/terrain_height.jpeg").c_str());
+    unsigned int helpTexture = loadTexture(FileSystem::getPath("resources/textures/pngegg.png").c_str());
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
@@ -388,7 +396,7 @@ int main() {
 
     unsigned int amount = 100;
     float radius = 50.0f; // r = 50.0f i o = 10.0f je okej sa amount = 100 // amount = 100, radius = 45.0f, offset = 100.0f
-    float offset = 10.0f;
+    float offset = 18.0f;// 50 15 ili 50 18 nije lose
     float overlappingOffset = 30.0f; // Overlapping offset must be higher than the one for grass because trees are much bigger in size
     modelMatrices = new glm::mat4[amount];
     srand(glfwGetTime()); // initialize random seed
@@ -404,11 +412,11 @@ int main() {
         displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
         float z = cos(angle) * radius + displacement;
 
-        if(checkOverlapping(x, z, tentCenter, overlappingOffset) || checkOverlapping(x, z, tent2Center, overlappingOffset) || checkOverlapping(x, z, glm::vec3(0.0f), overlappingOffset))
-        {
-            x = 100.0f;
-            z = 100.0f;
-        }
+//        if(checkOverlapping(x, z, tentCenter, overlappingOffset) || checkOverlapping(x, z, tent2Center, overlappingOffset) || checkOverlapping(x, z, glm::vec3(0.0f), overlappingOffset))
+//        {
+//            x = 100.0f;
+//            z = 100.0f;
+//        }
         model = glm::translate(model, glm::vec3(x, 0.0f, z));
         modelMatrices[i] = model;
     }
@@ -445,7 +453,7 @@ int main() {
 
     // Grass
     amount = 500;
-    radius = 10.0f;
+    radius = 20.0f;
     offset = 15.0f;
     overlappingOffset = 7.7f;
     modelMatrices = new glm::mat4[amount];
@@ -593,6 +601,7 @@ int main() {
         entityShader.use();
 
         // Directional light
+        entityShader.setInt("helpTexture", 4);
         entityShader.setVec3("dirLight.direction", dirLight.direction);
         // entityShader.setVec3("dirLight.direction", -1.0f, -0.2f, -0.3f);
         entityShader.setVec3("dirLight.ambient", dirLight.ambient);
@@ -717,10 +726,17 @@ int main() {
         model = glm::rotate(model, glm::radians(programState->boulder2RotationX), glm::vec3(1, 0, 0));
         model = glm::rotate(model, glm::radians(programState->boulder2RotationY), glm::vec3(0, 1, 0));
         model = glm::rotate(model, glm::radians(programState->boulder2RotationZ), glm::vec3(0, 0, 1));
-
         model = glm::scale(model, glm::vec3(programState->boulder2Scale));
         entityShader.setMat4("model", model);
         boulder2Model.Draw(entityShader);
+
+        //Render towel model
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, programState->towelPosition);
+        model = glm::rotate(model, glm::radians(programState->towelRotation), glm::vec3(0,1,0));
+        model = glm::scale(model, glm::vec3(programState->towelScale));
+        entityShader.setMat4("model", model);
+        towelModel.Draw(entityShader);
 
         // Render axe model
         model = glm::mat4(1.0f);
@@ -1168,6 +1184,11 @@ void DrawImGui(ProgramState *programState) {
         ImGui::DragFloat("Boulder rotation Z", &programState->boulder2RotationZ, 1.0, 0, 360);
         ImGui::DragFloat("Boulder scale", &programState->boulder2Scale, 0.05, 0.1, 4.0);
 
+        ImGui::Text("Towel:");
+        ImGui::DragFloat3("towel position", (float*)&programState->towelPosition);
+        ImGui::DragFloat("towel rotation", &programState->towelRotation, 1.0, 0, 360);
+        ImGui::DragFloat("towel scale", &programState->towelScale, 1.0, 50.0, 70.0);
+
 
 
         ImGui::End();
@@ -1277,10 +1298,10 @@ void renderTerrain()
     if (terrainVAO == 0)
     {
         // positions
-        glm::vec3 pos1(40.0f,  0.0f, 40.0f);
-        glm::vec3 pos2(40.0f, 0.0f, -40.0f);
-        glm::vec3 pos3( -40.0f, 0.0f, -40.0f);
-        glm::vec3 pos4( -40.0f,  0.0f, 40.0f);
+        glm::vec3 pos1(60.0f,  0.0f, 60.0f);
+        glm::vec3 pos2(60.0f, 0.0f, -60.0f);
+        glm::vec3 pos3( -60.0f, 0.0f, -60.0f);
+        glm::vec3 pos4( -60.0f,  0.0f, 60.0f);
         // texture coordinates
         glm::vec2 uv1(0.0f, 20.0f);
         glm::vec2 uv2(0.0f, 0.0f);

@@ -32,7 +32,7 @@ void main()
     mat3 TBN = transpose(mat3(T, B, N));
     TangentViewPos  = TBN * viewPos;
     TangentFragPos  = TBN * FragPos;
-        
+
     gl_Position = projection * view * model * vec4(aPos, 1.0);
 }
 

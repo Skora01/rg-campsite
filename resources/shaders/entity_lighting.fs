@@ -62,6 +62,7 @@ uniform SpotLight spotLight;
 uniform Material material;
 uniform vec3 lightColor;
 
+
 uniform bool blinn;
 uniform vec3 viewPos;
 
