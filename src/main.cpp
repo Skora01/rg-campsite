@@ -39,7 +39,7 @@ bool checkOverlapping(float targetX, float targetY, glm::vec3 center, float over
 // settings
 const unsigned int SCR_WIDTH = 800; /* Ovo mnogo utice na kvalitet slike sada sa HDR jer se pravi tekstura sa ovom rezolucijom valjda. Takodje mora window manager u floating modu da radi*/
 const unsigned int SCR_HEIGHT = 600;
-bool blinn = false;
+bool blinn = true;
 bool blinnKeyPressed = false;
 bool freeCamKeyPressed = false;
 float heightScale = 0.1;
@@ -998,22 +998,15 @@ void processInput(GLFWwindow *window) {
         programState->camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         programState->camera.ProcessKeyboard(RIGHT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS && !freeCamKeyPressed) {
+
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS && !freeCamKeyPressed) {
         programState->camera.freeCam = !programState->camera.freeCam;
         freeCamKeyPressed = true;
     }
-
-    if (glfwGetKey(window, GLFW_KEY_T) == GLFW_RELEASE) {
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_RELEASE) {
         freeCamKeyPressed = false;
     }
-    //flag on/of
-    if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS && !flagKeyPressed) {
-        flag = !flag;
-        flagKeyPressed = true;
-    }
-    if (glfwGetKey(window, GLFW_KEY_L) == GLFW_RELEASE) {
-        flagKeyPressed = false;
-    }
+
     //turning on Blinn-Phong lighting
     if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !blinnKeyPressed) {
         blinn = !blinn;
