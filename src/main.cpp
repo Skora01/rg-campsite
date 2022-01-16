@@ -62,6 +62,9 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+// Audio
+bool muteKeyPressed = false;
+
 struct PointLight {
     glm::vec3 position;
     glm::vec3 ambient;
@@ -791,12 +794,25 @@ float firstCoor, thirdCoord;
             model = glm::rotate(model, glm::radians(programState->ratRotationY), glm::vec3(0, 1, 0));
             model = glm::scale(model, glm::vec3(programState->ratScale));
 
-
             if(timer > 5000)
             {
                 wind.play();
             }
         }
+
+
+        if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS)
+        {
+
+            crows.stop();
+            wind.stop();
+            walking.stop();
+            horror.stop();
+            screech.stop();
+        }
+
+
+
         entityShader.setMat4("model", model);
         ratModel.Draw(entityShader);
         //Render boulder model
