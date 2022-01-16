@@ -2,9 +2,9 @@
 # Rg-campfire
 
 Project from Graphics using Opengl
-![App screenshot](https://cdn.discordapp.com/attachments/272476241465180160/932317401775751209/ss.jpeg)
-![App screenshot](https://cdn.discordapp.com/attachments/272476241465180160/932317920418234419/ss.jpeg)
 ![App screenshot](https://cdn.discordapp.com/attachments/272476241465180160/932318580287099010/ss.jpeg)
+![App screenshot](https://cdn.discordapp.com/attachments/272476241465180160/932317920418234419/ss.jpeg)
+![App screenshot](https://cdn.discordapp.com/attachments/272476241465180160/932317401775751209/ss.jpeg)
 ## Authors
 - [Skora01](https://github.com/Skora01):
 \*Cubemaps\
@@ -37,11 +37,18 @@ Project from Graphics using Opengl
 ## Deployment
 1. git clone https://github.com/Skora01/rg-campsite.git
 2. CLion -> Open -> path/to/my/project
-3. git submodule update --init --recursive
-4. Main function in src/main.cpp
-5. ALT+SHIFT+F10 -> project_base -> run
-
-
+3. Position your terminal on path/to/my/project
+4. git submodule update --init --recursive
+5. Main function in src/main.cpp
+6. ALT+SHIFT+F10 -> project_base -> run   
+**IF THIS DOESN'T WORK YOU CAN BUILD IT MANUALLY:**   
+  (Do steps 1 to 4 and then continue with this)
+- mkdir build
+- cd build
+- cmake ..
+- make
+- cd ..
+- ./project_base
 ## Key Bindings
 - **WASD** : Movement
 - **B** : Blinn lighting on/off
@@ -50,3 +57,4 @@ Project from Graphics using Opengl
 - **SPACE** : HDR on/off
 - **V** : Bloom on/off
 - **J/K** : Adjusting exposure for HDR
+- **M** : Mute audio
