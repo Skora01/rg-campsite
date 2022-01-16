@@ -14,6 +14,8 @@
 #include <learnopengl/camera.h>
 #include <learnopengl/model.h>
 
+#include <SFML/Audio.hpp>
+
 #include <iostream>
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
@@ -37,8 +39,8 @@ void renderQuad();
 bool checkOverlapping(float targetX, float targetY, glm::vec3 center, float overlappingOffset);
 
 // settings
-const unsigned int SCR_WIDTH = 800; /* Ovo mnogo utice na kvalitet slike sada sa HDR jer se pravi tekstura sa ovom rezolucijom valjda. Takodje mora window manager u floating modu da radi*/
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 1280;
+const unsigned int SCR_HEIGHT = 1024;
 bool blinn = false;
 bool blinnKeyPressed = false;
 bool freeCamKeyPressed = false;
@@ -113,8 +115,9 @@ struct ProgramState {
     float guitarRotationX = 354.0f;
     float guitarScale = 0.250;
 
-    glm::vec3 ratPosition = glm::vec3(5.0f, 0.0f, 5.0f); // TODO
-    float ratScale = 0.01f;
+    glm::vec3 ratPosition = glm::vec3(-42.0f, 0.0f, 43.0f); // TODO
+    float ratRotationY = 1.0f;
+    float ratScale = 0.015f;
 
     glm::vec3 boulder1Position = glm::vec3(2.380f, -3.0f, 16.220f);
     float boulder1Rotation = 180.630f;
@@ -186,6 +189,7 @@ int main() {
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
+
 
     // glfw window creation
     // --------------------
@@ -267,7 +271,7 @@ int main() {
     log2Model.SetShaderTextureNamePrefix("material.");
 
     // Guitar Model
-    Model guitarModel("resources/objects/guitar/gitara.obj");
+    Model guitarModel("resources/objects/guitar/guitar.obj");
     guitarModel.SetShaderTextureNamePrefix("material.");
 
     // Monster Model
@@ -296,9 +300,9 @@ int main() {
     pointLight.diffuse = lightColor;
     pointLight.specular = lightColor;
 
-    pointLight.constant = 1.0f;
-    pointLight.linear = 0.09f;
-    pointLight.quadratic = 3.0f; // 0.032f;
+    pointLight.constant = 0.0f;
+    pointLight.linear = 0.05f;
+    pointLight.quadratic = 7.05f;
 
 
     DirLight& dirLight = programState->dirLight;
@@ -371,7 +375,6 @@ int main() {
     unsigned int terrainNormal  = loadTexture(FileSystem::getPath("resources/textures/terrain_normal.jpeg").c_str());
     unsigned int terrainSpecular = loadTexture(FileSystem::getPath("resources/textures/terrain_metallic.jpeg").c_str());
     unsigned int terrainHeight = loadTexture(FileSystem::getPath("resources/textures/terrain_height.jpeg").c_str());
-    unsigned int helpTexture = loadTexture(FileSystem::getPath("resources/textures/pngegg.png").c_str());
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
@@ -395,12 +398,11 @@ int main() {
     glm::mat4 *modelMatrices;
 
     unsigned int amount = 100;
-    float radius = 50.0f; // r = 50.0f i o = 10.0f je okej sa amount = 100 // amount = 100, radius = 45.0f, offset = 100.0f
-    float offset = 18.0f;// 50 15 ili 50 18 nije lose
-    float overlappingOffset = 30.0f; // Overlapping offset must be higher than the one for grass because trees are much bigger in size
+    float radius = 50.0f;
+    float offset = 18.0f;
+    float overlappingOffset = 30.0f;
     modelMatrices = new glm::mat4[amount];
     srand(glfwGetTime()); // initialize random seed
-    // Offset must be higher for trees because of their size
 
     for(unsigned int i = 0; i < amount; i++)
     {
@@ -412,11 +414,6 @@ int main() {
         displacement = (rand() % (int)(2 * offset * 100)) / 100.0f - offset;
         float z = cos(angle) * radius + displacement;
 
-//        if(checkOverlapping(x, z, tentCenter, overlappingOffset) || checkOverlapping(x, z, tent2Center, overlappingOffset) || checkOverlapping(x, z, glm::vec3(0.0f), overlappingOffset))
-//        {
-//            x = 100.0f;
-//            z = 100.0f;
-//        }
         model = glm::translate(model, glm::vec3(x, 0.0f, z));
         modelMatrices[i] = model;
     }
@@ -565,23 +562,68 @@ int main() {
             std::cout << "Framebuffer not complete!" << std::endl;
     }
 
-    // Nismo unbindovali nas framebuffer !!
-
-
     shaderBlur.use();
     shaderBlur.setInt("image", 0);
 
     hdrShader.use();
     hdrShader.setInt("hdrBuffer", 0);
     hdrShader.setInt("bloomBlur", 1);
-    // render loop
-    // -----------
+
+    int timer = 0;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // Audio
+    sf::Music crows;
+    sf::Music wind;
+    sf::Music walking;
+    sf::Music horror;
+    sf::Music screech;
+
+    if (!crows.openFromFile("resources/audio/crows.mp3"))
+        return -1; // error
+    crows.play();
+
+    if(!wind.openFromFile("resources/audio/wind.mp3"))
+        return -1;
+    wind.play();
+
+    if(!walking.openFromFile("resources/audio/walking.mp3"))
+        return -1;
+    walking.play();
+
+    if(!horror.openFromFile("resources/audio/horror.mp3"))
+        return -1;
+
+    if(!screech.openFromFile("resources/audio/screech.mp3"))
+        return -1;
+
     while (!glfwWindowShouldClose(window)) {
         // per-frame time logic
         // --------------------
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+
+        timer++;
 
         // input
         // -----
@@ -707,11 +749,67 @@ int main() {
 
         // Render rat model
         model = glm::mat4(1.0f);
-        model = glm::translate(model, programState->ratPosition);
-        model = glm::scale(model, glm::vec3(programState->ratScale));
+        if(timer <= 600)
+        {
+            model = glm::translate(model, programState->ratPosition);
+            model = glm::rotate(model, glm::radians(programState->ratRotationY), glm::vec3(0, 1, 0));
+            model = glm::scale(model, glm::vec3(programState->ratScale));
+
+        }
+        else if(timer > 600 && timer <= 1200)
+        {
+            crows.pause();
+            model = glm::translate(model, glm::vec3(25.0f, 0.0f, 1.0f));
+            model = glm::rotate(model, glm::radians(108.0f), glm::vec3(0, 1, 0));
+            model = glm::scale(model, glm::vec3(programState->ratScale));
+            screech.play();
+            if(timer == 650)
+                horror.play();
+        }
+        else if(timer > 1200 && timer <= 1800)
+        {
+
+            model = glm::translate(model, glm::vec3(-23.0f, 0.0f, -28.0f));
+            model = glm::rotate(model, glm::radians(234.0f), glm::vec3(0, 1, 0));
+            model = glm::scale(model, glm::vec3(programState->ratScale));
+        }
+        else if(timer > 1800 && timer <= 2100)
+        {
+            model = glm::translate(model, glm::vec3(-2.0f, 0.0f, 21.0f));
+            model = glm::rotate(model, glm::radians(38.0f), glm::vec3(0, 1, 0));
+            model = glm::scale(model, glm::vec3(programState->ratScale));
+            wind.pause();
+        }
+        else if(timer > 2100 && timer <= 2200)
+        {
+            model = glm::translate(model, glm::vec3(programState->camera.Position.x, 0.0f, programState->camera.Position.z + 5.0f));
+            model = glm::rotate(model, glm::radians(38.0f), glm::vec3(0, 1, 0));
+            model = glm::scale(model, glm::vec3(programState->ratScale));
+        }
+        else if(timer > 2200 && timer <= 2450)
+        {
+            model = glm::translate(model, glm::vec3(programState->camera.Position.x, 0.0f, programState->camera.Position.z - 5.0f));
+            model = glm::rotate(model, glm::radians(218.0f), glm::vec3(0, 1, 0));
+            model = glm::scale(model, glm::vec3(programState->ratScale));
+        }
+        else {
+            crows.play();
+            screech.stop();
+            model = glm::translate(model, programState->ratPosition);
+            model = glm::rotate(model, glm::radians(programState->ratRotationY), glm::vec3(0, 1, 0));
+            model = glm::scale(model, glm::vec3(programState->ratScale));
+
+
+            if(timer > 5000)
+            {
+                wind.play();
+            }
+        }
+
+
+
         entityShader.setMat4("model", model);
         ratModel.Draw(entityShader);
-
         //Render boulder model
         model = glm::mat4(1.0f);
         model = glm::translate(model, programState->boulder1Position);
@@ -1117,9 +1215,9 @@ void DrawImGui(ProgramState *programState) {
 
         ImGui::Text("PointLight:");
         ImGui::DragFloat3("pointLight.position", (float*)&programState->pointLight.position);
-        ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 3.0);
-        ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 3.0);
-        ImGui::DragFloat("pointLight.quadratic", &programState->pointLight.quadratic, 0.05, 0.0, 3.0);
+        ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 10.0);
+        ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 10.0);
+        ImGui::DragFloat("pointLight.quadratic", &programState->pointLight.quadratic, 0.05, 0.0, 10.0);
 
         ImGui::Text("DirLight:");
         ImGui::DragFloat3("dirLight.direction", (float*)&programState->dirLight.direction);
@@ -1163,6 +1261,7 @@ void DrawImGui(ProgramState *programState) {
 
         ImGui::Text("Rat:");
         ImGui::DragFloat3("Rat position", (float*)&programState->ratPosition);
+        ImGui::DragFloat("Rat rotation Y", &programState->ratRotationY, 1.0, 0, 360);
         ImGui::DragFloat("Rat scale", &programState->ratScale, 0.001, 0.01, 1.0);
 
         ImGui::Text("Axe:");

@@ -25,6 +25,7 @@ find_package(ASSIMP REQUIRED)
 
 add_subdirectory(libs/glad)
 add_subdirectory(libs/imgui)
+add_subdirectory(libs/SFML)
 
 add_definitions(${OPENGL_DEFINITIONS})
 
@@ -45,7 +46,7 @@ include_directories(include/)
 add_executable(${PROJECT_NAME}
         ${SOURCES})
 
-target_link_libraries(${PROJECT_NAME} ${LIBS})
+target_link_libraries(${PROJECT_NAME} ${LIBS} sfml-audio)
 
 # set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/${PROJECT_NAME}")
 set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}")
