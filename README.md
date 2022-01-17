@@ -6,11 +6,11 @@ Graphics project using Opengl
 ![App screenshot](https://cdn.discordapp.com/attachments/272476241465180160/932317920418234419/ss.jpeg)
 ![App screenshot](https://cdn.discordapp.com/attachments/272476241465180160/932317401775751209/ss.jpeg)
 ## Authors
-- [Skora01](https://github.com/Skora01):
-\*Cubemaps\
+- [Skora01 362/2020](https://github.com/Skora01): \
+\* Cubemaps\
 \*Normal Mapping\
 \*Parallax Mapping
-- [kubni](https://github.com/kubni):
+- [kubni 369/2020](https://github.com/kubni): \
 \*Instancing\
 \*HDR\
 \*Bloom
@@ -36,10 +36,10 @@ Graphics project using Opengl
 
 ## Deployment
 1. git clone https://github.com/Skora01/rg-campsite.git
-2. CLion -> Open -> path/to/my/project
-3. Position your terminal to path/to/my/project
-4. git submodule update --init --recursive
-5. install dependencies
+2. Position your terminal to path/to/my/project
+3. git submodule update --init --recursive
+4. install dependencies 
+5. CLion -> Open -> path/to/my/project
 6. Main function in src/main.cpp
 7. ALT+SHIFT+F10 -> project_base -> run   
 **IF THIS DOESN'T WORK YOU CAN BUILD IT MANUALLY:**   

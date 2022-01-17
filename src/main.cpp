@@ -605,7 +605,7 @@ int main() {
     horror.setVolume(20.f);
     screech.setVolume(20.f);
     crows.setVolume(20.f);
-    wind.setVolume(20.f);
+    wind.setVolume(40.f);
     walking.setVolume(20.f);
 
     bool firstTimeFront = true;
@@ -744,7 +744,6 @@ int main() {
             model = glm::translate(model, programState->ratPosition);
             model = glm::rotate(model, glm::radians(programState->ratRotationY), glm::vec3(0, 1, 0));
             model = glm::scale(model, glm::vec3(programState->ratScale));
-
         }
         else if(timer > 600 && timer <= 1200)
         {
