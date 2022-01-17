@@ -51,6 +51,7 @@ out vec3 dirDir;
 out vec3 pointPos;
 out vec3 spotPos;
 out vec3 spotDir;
+out vec3 Normal;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -80,6 +81,7 @@ void main()
     pointPos = TBN * pointLight.position;
     spotPos = TBN * spotLight.position;
     spotDir = TBN * spotLight.direction;
+    Normal = transpose(inverse(mat3(model))) * aNormal;
 
     gl_Position = projection * view * vec4(FragPos, 1.0);
 }

@@ -44,6 +44,7 @@ in vec3 TangentLightPos;
 in vec3 TangentViewPos;
 in vec3 TangentFragPos;
 in mat3 TBN;
+in vec3 Normal;
 
 uniform DirLight dirLight;
 uniform PointLight pointLight;
@@ -202,7 +203,7 @@ void main()
     // phase 2: point lights
     result += CalcPointLight(pointLight, norm, TangentFragPos, viewDir, texCoords);
     // phase 3: spot light
-    result += CalcSpotLight(spotLight, norm, FragPos, viewDir, texCoords);
+    result += CalcSpotLight(spotLight, normalize(Normal), FragPos, viewDir, texCoords);
 
     // Bloom
     float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));

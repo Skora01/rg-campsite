@@ -54,6 +54,7 @@ in vec3 dirDir;
 in vec3 pointPos;
 in vec3 spotPos;
 in vec3 spotDir;
+in vec3 Normal;
 
 uniform DirLight dirLight;
 uniform PointLight pointLight;
@@ -171,7 +172,7 @@ void main()
     // phase 2: point light
     result += CalcPointLight(pointPos, pointLight, norm, TangentFragPos, viewDir);
     // phase 3: spot light
-    result += CalcSpotLight(spotDir, spotPos, spotLight, norm, FragPos, viewDir);
+    result += CalcSpotLight(spotDir, spotPos, spotLight, normalize(Normal), FragPos, viewDir);
 
     float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
     if(brightness > 1.0)
