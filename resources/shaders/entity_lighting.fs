@@ -172,7 +172,9 @@ void main()
     // phase 2: point light
     result += CalcPointLight(pointPos, pointLight, norm, TangentFragPos, viewDir);
     // phase 3: spot light
-    result += CalcSpotLight(spotDir, spotPos, spotLight, normalize(Normal), FragPos, viewDir);
+    vec3 normSpot = Normal*texture(material.texture_normal1, TexCoords).rgb;
+    normSpot = normalize(normSpot);
+    result += CalcSpotLight(spotDir, spotPos, spotLight, normSpot, FragPos, viewDir);
 
     float brightness = dot(result, vec3(0.2126, 0.7152, 0.0722));
     if(brightness > 1.0)
